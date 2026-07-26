@@ -42,6 +42,7 @@ func run(output string, top int, topClasses int) error {
 	fmt.Printf("Wrote report to %s\n\n", output)
 
 	printSummary(rows, top)
+	printAgencyStats(agencyStats(siteScans))
 	printClassFrequency(classFrequency(rows), topClasses)
 
 	return nil

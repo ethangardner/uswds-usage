@@ -14,6 +14,7 @@ const siteScanningURL = "https://api.gsa.gov/technology/site-scanning/data/site-
 type SiteScanRecord struct {
 	Domain               string
 	Agency               string
+	Bureau               string
 	UswdsCount           int
 	UswdsSemanticVersion string
 	UswdsClasses         []string
@@ -36,7 +37,7 @@ func fetchSiteScanRecords() ([]SiteScanRecord, error) {
 		return nil, fmt.Errorf("reading site-scanning header: %w", err)
 	}
 
-	idx, err := columnIndex(header, "domain", "agency", "uswds_count", "uswds_semantic_version", "uswds_usa_class_list")
+	idx, err := columnIndex(header, "domain", "agency", "bureau", "uswds_count", "uswds_semantic_version", "uswds_usa_class_list")
 	if err != nil {
 		return nil, fmt.Errorf("site-scanning file: %w", err)
 	}
@@ -56,6 +57,7 @@ func fetchSiteScanRecords() ([]SiteScanRecord, error) {
 		records = append(records, SiteScanRecord{
 			Domain:               strings.ToLower(strings.TrimSpace(row[idx["domain"]])),
 			Agency:               row[idx["agency"]],
+			Bureau:               row[idx["bureau"]],
 			UswdsCount:           count,
 			UswdsSemanticVersion: row[idx["uswds_semantic_version"]],
 			UswdsClasses:         parseClassList(row[idx["uswds_usa_class_list"]]),

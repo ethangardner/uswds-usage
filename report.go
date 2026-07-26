@@ -94,6 +94,47 @@ func buildReport(siteScans []SiteScanRecord, analytics map[string]AnalyticsRecor
 	return rows
 }
 
+// AgencyStats summarizes how many agencies and subagencies (bureaus) have at
+// least one USWDS-using site, per the raw (non-deduped) site-scanning rows.
+// Raw rows are used rather than deduped ReportRows because a single shared
+// domain (e.g. secure.login.gov) is scanned once per agency/bureau that uses
+// it, and each of those agencies genuinely counts as "using USWDS" via that
+// shared site.
+type AgencyStats struct {
+	Agencies    []string
+	Subagencies int // distinct (agency, bureau) pairs with a non-empty bureau
+}
+
+func agencyStats(siteScans []SiteScanRecord) AgencyStats {
+	agencySet := make(map[string]bool)
+	subagencySet := make(map[string]bool)
+
+	for _, s := range siteScans {
+		if !s.UsesUSWDS() {
+			continue
+		}
+		if s.Agency != "" {
+			agencySet[s.Agency] = true
+		}
+		if s.Bureau != "" {
+			subagencySet[s.Agency+"\x00"+s.Bureau] = true
+		}
+	}
+
+	agencies := make([]string, 0, len(agencySet))
+	for a := range agencySet {
+		agencies = append(agencies, a)
+	}
+	sort.Strings(agencies)
+
+	return AgencyStats{Agencies: agencies, Subagencies: len(subagencySet)}
+}
+
+func printAgencyStats(stats AgencyStats) {
+	fmt.Printf("\nAgencies using USWDS:        %d\n", len(stats.Agencies))
+	fmt.Printf("Subagencies (bureaus) using USWDS: %d\n", stats.Subagencies)
+}
+
 // classFrequency counts, across all USWDS-using domains, how many domains
 // use each detected "usa-*" class, sorted descending by site count.
 func classFrequency(rows []ReportRow) []ClassCount {
