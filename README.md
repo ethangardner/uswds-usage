@@ -41,7 +41,7 @@ classes in use.
 Example:
 
 ```bash
-go run . -output report.csv -top 50 -top-classes 10
+go run . -output report.csv -top 100 -top-classes 100
 ```
 
 You can also build a binary and run it directly:
