@@ -13,15 +13,16 @@ func main() {
 	output := flag.String("output", "uswds-traffic-report.csv", "path to write the CSV report to")
 	top := flag.Int("top", 20, "number of top sites (by pageviews) to print to the console")
 	topClasses := flag.Int("top-classes", 25, "number of most common USWDS classes to print to the console")
+	topElements := flag.Int("top-elements", 25, "number of most common USWDS custom elements to print to the console")
 	flag.Parse()
 
-	if err := run(*output, *top, *topClasses); err != nil {
+	if err := run(*output, *top, *topClasses, *topElements); err != nil {
 		fmt.Fprintln(os.Stderr, "error:", err)
 		os.Exit(1)
 	}
 }
 
-func run(output string, top int, topClasses int) error {
+func run(output string, top int, topClasses int, topElements int) error {
 	fmt.Println("Downloading site-scanning data...")
 	siteScans, err := fetchSiteScanRecords()
 	if err != nil {
@@ -42,8 +43,10 @@ func run(output string, top int, topClasses int) error {
 	fmt.Printf("Wrote report to %s\n\n", output)
 
 	printSummary(rows, top)
+	printElementsOnlySummary(rows, top)
 	printAgencyStats(agencyStats(siteScans))
-	printClassFrequency(classFrequency(rows), topClasses)
+	printUsageFrequency("USWDS classes", classFrequency(rows), topClasses)
+	printUsageFrequency("USWDS elements", elementFrequency(rows), topElements)
 
 	return nil
 }

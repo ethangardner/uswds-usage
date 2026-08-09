@@ -18,11 +18,14 @@ type SiteScanRecord struct {
 	UswdsCount           int
 	UswdsSemanticVersion string
 	UswdsClasses         []string
+	UswdsElements        []string
 }
 
-// UsesUSWDS reports whether the site-scanning data detected USWDS on this site.
+// UsesUSWDS reports whether the site-scanning data detected USWDS on this
+// site, either via class-based markup (uswds_count) or via USWDS custom
+// elements (web components), which uswds_count does not account for.
 func (s SiteScanRecord) UsesUSWDS() bool {
-	return s.UswdsCount > 0
+	return s.UswdsCount > 0 || len(s.UswdsElements) > 0
 }
 
 func fetchSiteScanRecords() ([]SiteScanRecord, error) {
@@ -37,7 +40,7 @@ func fetchSiteScanRecords() ([]SiteScanRecord, error) {
 		return nil, fmt.Errorf("reading site-scanning header: %w", err)
 	}
 
-	idx, err := columnIndex(header, "domain", "agency", "bureau", "uswds_count", "uswds_semantic_version", "uswds_usa_class_list")
+	idx, err := columnIndex(header, "domain", "agency", "bureau", "uswds_count", "uswds_semantic_version", "uswds_usa_class_list", "uswds_usa_elements_list")
 	if err != nil {
 		return nil, fmt.Errorf("site-scanning file: %w", err)
 	}
@@ -61,15 +64,17 @@ func fetchSiteScanRecords() ([]SiteScanRecord, error) {
 			UswdsCount:           count,
 			UswdsSemanticVersion: row[idx["uswds_semantic_version"]],
 			UswdsClasses:         parseClassList(row[idx["uswds_usa_class_list"]]),
+			UswdsElements:        parseClassList(row[idx["uswds_usa_elements_list"]]),
 		})
 	}
 
 	return records, nil
 }
 
-// parseClassList parses the uswds_usa_class_list column, which holds either
-// a JSON array of detected "usa-*" class names (e.g. `["usa-accordion"]`) or
-// a placeholder value ("0" or empty) when no classes were detected.
+// parseClassList parses a JSON-array-encoded list column (uswds_usa_class_list
+// or uswds_usa_elements_list), which holds either a JSON array of detected
+// names (e.g. `["usa-accordion"]` or `["usa-banner"]`) or a placeholder value
+// ("0" or empty) when nothing was detected.
 func parseClassList(field string) []string {
 	field = strings.TrimSpace(field)
 	if field == "" || field == "0" {

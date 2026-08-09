@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"sort"
+	"strings"
 )
 
 // ReportRow is one joined USWDS-site + traffic entry in the final report.
@@ -13,14 +14,26 @@ type ReportRow struct {
 	Agency               string
 	UswdsSemanticVersion string
 	Classes              []string
+	Elements             []string
 	Pageviews            int
 	Visits               int
 	HasTrafficData       bool
 }
 
-// ClassCount is how many distinct USWDS-using domains use a given "usa-*" class.
-type ClassCount struct {
-	Class string
+// UsesClasses reports whether the site was detected using class-based USWDS markup.
+func (r ReportRow) UsesClasses() bool {
+	return len(r.Classes) > 0
+}
+
+// UsesElements reports whether the site was detected using USWDS custom elements (web components).
+func (r ReportRow) UsesElements() bool {
+	return len(r.Elements) > 0
+}
+
+// UsageCount is how many distinct USWDS-using domains use a given "usa-*"
+// class or USWDS custom element.
+type UsageCount struct {
+	Name  string
 	Sites int
 }
 
@@ -35,6 +48,7 @@ func buildReport(siteScans []SiteScanRecord, analytics map[string]AnalyticsRecor
 		agency    string
 		version   string
 		classes   map[string]bool
+		elements  map[string]bool
 	}
 
 	byDomain := make(map[string]*agg)
@@ -42,7 +56,7 @@ func buildReport(siteScans []SiteScanRecord, analytics map[string]AnalyticsRecor
 	for _, s := range siteScans {
 		a, ok := byDomain[s.Domain]
 		if !ok {
-			a = &agg{classes: make(map[string]bool)}
+			a = &agg{classes: make(map[string]bool), elements: make(map[string]bool)}
 			byDomain[s.Domain] = a
 			order = append(order, s.Domain)
 		}
@@ -57,6 +71,9 @@ func buildReport(siteScans []SiteScanRecord, analytics map[string]AnalyticsRecor
 		}
 		for _, c := range s.UswdsClasses {
 			a.classes[c] = true
+		}
+		for _, e := range s.UswdsElements {
+			a.elements[e] = true
 		}
 	}
 
@@ -73,11 +90,18 @@ func buildReport(siteScans []SiteScanRecord, analytics map[string]AnalyticsRecor
 		}
 		sort.Strings(classes)
 
+		elements := make([]string, 0, len(a.elements))
+		for e := range a.elements {
+			elements = append(elements, e)
+		}
+		sort.Strings(elements)
+
 		row := ReportRow{
 			Domain:               domain,
 			Agency:               a.agency,
 			UswdsSemanticVersion: a.version,
 			Classes:              classes,
+			Elements:             elements,
 		}
 		if traffic, ok := analytics[domain]; ok {
 			row.Pageviews = traffic.Pageviews
@@ -135,32 +159,45 @@ func printAgencyStats(stats AgencyStats) {
 	fmt.Printf("Subagencies (bureaus) using USWDS: %d\n", stats.Subagencies)
 }
 
-// classFrequency counts, across all USWDS-using domains, how many domains
-// use each detected "usa-*" class, sorted descending by site count.
-func classFrequency(rows []ReportRow) []ClassCount {
+// frequency counts, across all USWDS-using domains, how many domains use
+// each name returned by selector (e.g. a class or element name), sorted
+// descending by site count.
+func frequency(rows []ReportRow, selector func(ReportRow) []string) []UsageCount {
 	counts := make(map[string]int)
 	for _, r := range rows {
-		for _, c := range r.Classes {
-			counts[c]++
+		for _, name := range selector(r) {
+			counts[name]++
 		}
 	}
 
-	result := make([]ClassCount, 0, len(counts))
-	for class, n := range counts {
-		result = append(result, ClassCount{Class: class, Sites: n})
+	result := make([]UsageCount, 0, len(counts))
+	for name, n := range counts {
+		result = append(result, UsageCount{Name: name, Sites: n})
 	}
 
 	sort.Slice(result, func(i, j int) bool {
 		if result[i].Sites != result[j].Sites {
 			return result[i].Sites > result[j].Sites
 		}
-		return result[i].Class < result[j].Class
+		return result[i].Name < result[j].Name
 	})
 
 	return result
 }
 
-func printClassFrequency(counts []ClassCount, top int) {
+// classFrequency counts, across all USWDS-using domains, how many domains
+// use each detected "usa-*" class.
+func classFrequency(rows []ReportRow) []UsageCount {
+	return frequency(rows, func(r ReportRow) []string { return r.Classes })
+}
+
+// elementFrequency counts, across all USWDS-using domains, how many domains
+// use each detected USWDS custom element (web component).
+func elementFrequency(rows []ReportRow) []UsageCount {
+	return frequency(rows, func(r ReportRow) []string { return r.Elements })
+}
+
+func printUsageFrequency(label string, counts []UsageCount, top int) {
 	if top <= 0 || len(counts) == 0 {
 		return
 	}
@@ -168,10 +205,10 @@ func printClassFrequency(counts []ClassCount, top int) {
 		top = len(counts)
 	}
 
-	fmt.Printf("\nMost common USWDS classes (top %d, by number of sites):\n", top)
-	fmt.Printf("%-35s %10s\n", "CLASS", "SITES")
+	fmt.Printf("\nMost common %s (top %d, by number of sites):\n", label, top)
+	fmt.Printf("%-35s %10s\n", strings.ToUpper(label), "SITES")
 	for _, c := range counts[:top] {
-		fmt.Printf("%-35s %10d\n", c.Class, c.Sites)
+		fmt.Printf("%-35s %10d\n", c.Name, c.Sites)
 	}
 }
 
@@ -185,7 +222,7 @@ func writeReportCSV(path string, rows []ReportRow) error {
 	w := csv.NewWriter(f)
 	defer w.Flush()
 
-	if err := w.Write([]string{"domain", "agency", "uswds_semantic_version", "pageviews", "visits"}); err != nil {
+	if err := w.Write([]string{"domain", "agency", "uswds_semantic_version", "uses_classes", "uses_elements", "pageviews", "visits"}); err != nil {
 		return err
 	}
 
@@ -194,6 +231,8 @@ func writeReportCSV(path string, rows []ReportRow) error {
 			r.Domain,
 			r.Agency,
 			r.UswdsSemanticVersion,
+			fmt.Sprintf("%t", r.UsesClasses()),
+			fmt.Sprintf("%t", r.UsesElements()),
 			fmt.Sprintf("%d", r.Pageviews),
 			fmt.Sprintf("%d", r.Visits),
 		}); err != nil {
@@ -220,6 +259,48 @@ func printSummary(rows []ReportRow, top int) {
 	fmt.Printf("Total pageviews (30-day):    %d\n", totalPageviews)
 	fmt.Printf("Total visits (30-day):       %d\n", totalVisits)
 
+	printTopSites("Top %d USWDS sites by pageviews:", rows, top)
+}
+
+// elementsOnlyRows returns the subset of rows using USWDS custom elements
+// (web components) but no class-based USWDS markup.
+func elementsOnlyRows(rows []ReportRow) []ReportRow {
+	var result []ReportRow
+	for _, r := range rows {
+		if r.UsesElements() && !r.UsesClasses() {
+			result = append(result, r)
+		}
+	}
+	return result
+}
+
+// printElementsOnlySummary reports on the cohort of sites using USWDS custom
+// elements but no class-based markup: how many there are, their combined
+// traffic, and a top-N table by pageviews.
+func printElementsOnlySummary(rows []ReportRow, top int) {
+	elementsOnly := elementsOnlyRows(rows)
+
+	matched := 0
+	var totalPageviews, totalVisits int
+	for _, r := range elementsOnly {
+		if r.HasTrafficData {
+			matched++
+		}
+		totalPageviews += r.Pageviews
+		totalVisits += r.Visits
+	}
+
+	fmt.Printf("\nSites using USWDS elements but no classes: %d\n", len(elementsOnly))
+	fmt.Printf("Matched to traffic data:                   %d\n", matched)
+	fmt.Printf("Total pageviews (30-day):                  %d\n", totalPageviews)
+	fmt.Printf("Total visits (30-day):                     %d\n", totalVisits)
+
+	printTopSites("Top %d elements-only USWDS sites by pageviews:", elementsOnly, top)
+}
+
+// printTopSites prints a pageviews-sorted table of up to top rows.
+// titleFormat must contain exactly one %d verb for the row count.
+func printTopSites(titleFormat string, rows []ReportRow, top int) {
 	if top <= 0 || len(rows) == 0 {
 		return
 	}
@@ -227,7 +308,7 @@ func printSummary(rows []ReportRow, top int) {
 		top = len(rows)
 	}
 
-	fmt.Printf("\nTop %d USWDS sites by pageviews:\n", top)
+	fmt.Printf("\n"+titleFormat+"\n", top)
 	fmt.Printf("%-35s %-45s %10s %10s\n", "DOMAIN", "AGENCY", "PAGEVIEWS", "VISITS")
 	for _, r := range rows[:top] {
 		agency := r.Agency
