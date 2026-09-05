@@ -181,7 +181,10 @@ def fmt_delta_pts(a, b):
 REPORT_CSS = """
 .report-chart-panel { background: #fff; border: 1px solid #dfe1e2; border-radius: 4px; padding: 1.5rem 1.5rem 1rem; }
 .report-chart-wrap { overflow-x: auto; }
-.report-chart { position: relative; }
+/* aspect-ratio matches the svg's own width/height below width 480px, the
+   svg's min-width keeps it 480 wide regardless of container, so the floor
+   below keeps this box tall enough to match that too. */
+.report-chart { position: relative; aspect-ratio: 920 / 300; min-height: calc(480px * 300 / 920); }
 .report-chart svg { width: 100%; height: auto; display: block; min-width: 480px; }
 .report-axis-title { font-size: 12px; fill: #3d4551; font-weight: 600; }
 .report-axis .domain { stroke: #a9aeb1; }
@@ -342,6 +345,7 @@ def render(gsa, snap, ha_origins, ha_cwv, ha_a11y):
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>USWDS Adoption Pulse</title>
   <link rel="stylesheet" href="assets/uswds/css/uswds.css">
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
   <!-- No uswds-init.js / uswds.min.js: those exist to prevent FOUC on
        Banner/Header/Modal and to initialize interactive component JS
        (accordion, combo-box, sortable tables, dismissible alerts, etc).
@@ -350,6 +354,19 @@ def render(gsa, snap, ha_origins, ha_cwv, ha_a11y):
        against the component sources). Add them back if a future component
        here actually needs JS. -->
   <style>{REPORT_CSS}</style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js" integrity="sha512-vc58qvvBdrDR4etbxMdlTt4GBQk1qjvyORR2nrsPsFPyrs+/u5c3+1Ct6upOgdZoIl7eq6k3a1UPDSNAQi/32A==" crossorigin="anonymous" referrerpolicy="no-referrer" type="module"></script>
+  <script src="assets/report.js" type="module"></script>
+  <script type="application/json" id="report-chart-data">{json.dumps(chart_data)}</script>
+  <script type="module">
+    (function () {{
+      var data = JSON.parse(document.getElementById("report-chart-data").textContent);
+      reportCharts.drawLineChart("#chart-version-mix", data.versionMix);
+      reportCharts.drawBarChart("#chart-share-by-year", data.shareByYear);
+      reportCharts.drawLineChart("#chart-origin-count", data.originCount);
+      reportCharts.drawLineChart("#chart-cwv", data.cwv);
+      reportCharts.drawLineChart("#chart-a11y", data.a11y);
+    }})();
+  </script>
 </head>
 <body>
 <div class="grid-container padding-y-4">
@@ -488,19 +505,6 @@ def render(gsa, snap, ha_origins, ha_cwv, ha_a11y):
 
 </main>
 </div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js" integrity="sha512-vc58qvvBdrDR4etbxMdlTt4GBQk1qjvyORR2nrsPsFPyrs+/u5c3+1Ct6upOgdZoIl7eq6k3a1UPDSNAQi/32A==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<script src="assets/report.js"></script>
-<script type="application/json" id="report-chart-data">{json.dumps(chart_data)}</script>
-<script>
-  (function () {{
-    var data = JSON.parse(document.getElementById("report-chart-data").textContent);
-    reportCharts.drawLineChart("#chart-version-mix", data.versionMix);
-    reportCharts.drawBarChart("#chart-share-by-year", data.shareByYear);
-    reportCharts.drawLineChart("#chart-origin-count", data.originCount);
-    reportCharts.drawLineChart("#chart-cwv", data.cwv);
-    reportCharts.drawLineChart("#chart-a11y", data.a11y);
-  }})();
-</script>
 </body>
 </html>
 """

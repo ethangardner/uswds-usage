@@ -48,9 +48,21 @@
   function positionTooltip(tooltip, root, px, py) {
     const rootRect = root.getBoundingClientRect();
     const scale = rootRect.width / WIDTH;
+    const scaledX = px * scale;
+    const tipWidth = tooltip.node().offsetWidth;
+    // Flip to the point's left when the default right-hand placement would
+    // push the tooltip past the chart's edge -- that overflow otherwise
+    // grows .report-chart-wrap's scrollable width and triggers horizontal
+    // scroll on hover, since this tooltip is an absolutely-positioned child
+    // with nothing clipping it.
+    let left = scaledX + 12;
+    if (left + tipWidth > rootRect.width) {
+      left = scaledX - tipWidth - 12;
+    }
+    left = Math.max(0, Math.min(left, rootRect.width - tipWidth));
     tooltip
       .style("opacity", 1)
-      .style("left", px * scale + 12 + "px")
+      .style("left", left + "px")
       .style("top", py * scale + "px");
   }
 
