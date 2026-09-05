@@ -33,14 +33,50 @@ npm run build   # compiles theme/styles.scss -> docs/assets/uswds/css/uswds.css,
                  # and copies the fonts/icons/js it needs into docs/assets/uswds/
 ```
 
-`theme/_uswds-theme.scss` is the one customization on top of stock USWDS —
-following the settings-first approach from
+`theme/_uswds-theme.scss` is the one *typography* customization on top of
+stock USWDS — following the settings-first approach from
 [uswds/uswds#6765](https://github.com/uswds/uswds/discussions/6765#discussioncomment-17674633)
 ("modify Sass variables" before utility classes or custom CSS), it switches
 the heading font role to the built-in `public-sans` typeface token so the
 whole report reads in one voice. `scripts/build_report.py` (below) then
 generates `docs/index.html` against that compiled CSS; run `npm run build`
 again any time `theme/` changes or USWDS is upgraded in `package.json`.
+
+### It's a selective build, not the full USWDS bundle
+
+`theme/styles.scss` forwards only the USWDS packages this report's markup
+actually uses (`usa-card`, `usa-alert`, `usa-table`, `usa-layout-grid`,
+`uswds-typography`, `uswds-global`) instead of `@forward "uswds"` — the
+monolith that pulls in every component (accordion, banner, header, hero,
+modal, nav, date picker, and everything else) regardless of whether a
+project uses them. `theme/_uswds-theme.scss` further restricts the utilities
+package to only the modules this page's classes need
+(`$output-these-utilities`) and turns off the serif/mono font *type* slots
+entirely (`$theme-font-type-serif/-mono: false`) since nothing here renders
+in those roles — USWDS otherwise ships a Merriweather and Roboto Mono
+`@font-face` block unconditionally, regardless of whether any role points
+at them. `theme/copy-assets.js` (run by `npm run build:assets`) mirrors the
+same idea for non-CSS assets: it only copies the Public Sans font files and
+the exact handful of icon SVGs the compiled CSS actually references (parsed
+out of `docs/assets/uswds/css/uswds.css` itself), not the full ~250-icon set.
+Neither `uswds-init.js` nor `uswds.min.js` is loaded at all — every
+component in use here (card, alert, table, prose) is static markup and CSS
+with no JS of its own; those two scripts exist for banner/header/modal FOUC
+prevention and interactive-component initialization (accordion, combo-box,
+sortable tables, dismissible alerts), none of which this page has.
+
+Net effect: the compiled CSS goes from ~570KB (full `uswds` bundle) to
+~240KB, and the asset directory from ~16MB (full icon/font sets vendored) to
+under 1MB.
+
+**If you add a new component or utility class to `scripts/build_report.py`**,
+it may silently not exist in the compiled output — no error, the class just
+won't match anything. Re-run this to see the real class inventory, and
+extend `theme/styles.scss` / `$output-these-utilities` accordingly:
+
+```bash
+grep -o 'class="[^"]*"' docs/index.html | tr ' ' '\n' | sort -u
+```
 
 ## The monthly USWDS Adoption Pulse report
 

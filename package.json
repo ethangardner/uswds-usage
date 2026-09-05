@@ -4,7 +4,7 @@
   "description": "Sass build for the USWDS-themed docs/index.html report (not the Go CLI).",
   "scripts": {
     "build:css": "sass theme/styles.scss docs/assets/uswds/css/uswds.css --load-path=node_modules/@uswds/uswds/packages --style=compressed --no-source-map && node theme/stamp-version.js",
-    "build:assets": "mkdir -p docs/assets/uswds/fonts/public-sans docs/assets/uswds/fonts/roboto-mono docs/assets/uswds/img docs/assets/uswds/js && cp node_modules/@uswds/uswds/dist/fonts/public-sans/*.woff2 docs/assets/uswds/fonts/public-sans/ && cp node_modules/@uswds/uswds/dist/fonts/roboto-mono/*.woff2 docs/assets/uswds/fonts/roboto-mono/ && cp -r node_modules/@uswds/uswds/dist/img/usa-icons node_modules/@uswds/uswds/dist/img/usa-icons-bg docs/assets/uswds/img/ && cp node_modules/@uswds/uswds/dist/js/uswds-init.min.js node_modules/@uswds/uswds/dist/js/uswds.min.js docs/assets/uswds/js/",
+    "build:assets": "node theme/copy-assets.js",
     "build": "npm run build:css && npm run build:assets"
   },
   "devDependencies": {

@@ -1,3 +1,39 @@
+/*! uswds @version */
+// ^ Normally lives at the top of USWDS's own `uswds` package index and gets
+// stamped by theme/stamp-version.js after compiling. We forward our own
+// selective package list below instead of `uswds` (see comment below), so
+// that source line -- and the banner GSA's scanner looks for -- would
+// otherwise be lost. Keep this here even though it looks redundant with
+// the version already visible elsewhere; it's the only thing stamp-version.js
+// has to substitute.
 @forward "uswds-theme";
-@forward "uswds";
+
+// Selective build: forwards only the USWDS packages this report's markup
+// actually uses, instead of the `uswds` package (which forwards every
+// component -- accordion, banner, header, hero, modal, nav, date picker,
+// etc. -- regardless of whether a project uses them). Cuts the compiled
+// CSS from ~570KB to a fraction of that.
+//
+// Current class inventory (verify with the grep below before trusting this
+// list is still complete, e.g. after adding a new usa-* class to the page):
+//   grep -o 'class="[^"]*"' docs/index.html | tr ' ' '\n' | sort -u
+//
+//   usa-alert, usa-alert__*        -> usa-alert
+//   usa-card, usa-card__*          -> usa-card
+//   usa-table, usa-table--striped  -> usa-table
+//   usa-prose, usa-intro           -> uswds-typography
+//   grid-container, grid-col-*     -> usa-layout-grid
+//   everything else (reset, fonts, -> uswds-global
+//     tokens, settings functions)
+//   text-*, font-*, margin-*, etc. -> uswds-utilities (trimmed further by
+//                                     $output-these-utilities, see
+//                                     _uswds-theme.scss)
+@forward "uswds-global";
+@forward "uswds-typography";
+@forward "usa-layout-grid/src/styles";
+@forward "usa-card/src/styles";
+@forward "usa-alert/src/styles";
+@forward "usa-table/src/styles";
+@forward "uswds-utilities/src/styles";
+
 @forward "uswds-theme-custom-styles";

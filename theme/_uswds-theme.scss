@@ -10,11 +10,52 @@ Public Sans is a built-in USWDS typeface token (fonts already bundled,
 no custom @font-face needed) -- switching the heading role to it gives a
 single, consistent voice across a data-dense report instead of the default
 sans-body/serif-heading pairing, without touching any usa-* class.
+
+USWDS generates a @font-face block per font TYPE slot (sans/serif/mono/...),
+not per ROLE -- serif (Merriweather) and mono (Roboto Mono) ship by default
+regardless of whether any role points at them, the same way the settings
+file leaves cond/icon/lang off (`false`) when a project doesn't use them.
+This page has no <code> and nothing in alt/serif role, so both
+$theme-font-role-alt/-code are pointed at "sans" (reusing the already-loaded
+Public Sans) AND the serif/mono type slots themselves are turned off below
+-- the role change alone doesn't stop the @font-face generation; the type
+being non-false is what triggers it. Verified empirically: this actually
+removes "Merriweather"/"Roboto Mono" from the compiled CSS, don't just trust
+the settings docs' description of what "role" vs "type" each control.
+
+$output-these-utilities restricts the utilities package to the modules this
+report's markup actually uses (checked by grepping every class out of a
+freshly-generated docs/index.html -- see the class inventory in
+scripts/build_report.py). Utilities are normally output in full regardless
+of which components you forward, and are the single biggest chunk of a
+default USWDS build, so this is where most of the size win comes from.
+Re-run that grep and extend this list before using a new utility class,
+or it will silently do nothing (no error, the class just won't exist).
 ----------------------------------------
 */
 
 @use "uswds-core" with (
   $theme-font-type-sans: "public-sans",
+  $theme-font-type-serif: false,
+  $theme-font-type-mono: false,
   $theme-font-role-heading: "sans",
+  $theme-font-role-alt: "sans",
+  $theme-font-role-code: "sans",
   $theme-show-notifications: false,
+  $output-these-utilities: (
+    "align-items",
+    "justify-content",
+    "flex-wrap",
+    "display",
+    "margin",
+    "margin-vertical",
+    "padding",
+    "border",
+    "border-color",
+    "color",
+    "text-transform",
+    "font-weight",
+    "font",
+    "width",
+  ),
 );

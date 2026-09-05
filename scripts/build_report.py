@@ -336,13 +336,19 @@ def render(gsa, snap, ha_origins, ha_cwv, ha_a11y):
     legacy_color = "text-success-dark" if legacy_delta < 0 else "text-error-dark"
 
     html = f"""<!doctype html>
-<html lang="en" class="usa-js-loading">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>USWDS Adoption Pulse</title>
   <link rel="stylesheet" href="assets/uswds/css/uswds.css">
-  <script src="assets/uswds/js/uswds-init.min.js"></script>
+  <!-- No uswds-init.js / uswds.min.js: those exist to prevent FOUC on
+       Banner/Header/Modal and to initialize interactive component JS
+       (accordion, combo-box, sortable tables, dismissible alerts, etc).
+       This page uses none of that -- card, alert, table and prose here are
+       all static markup+CSS with zero JS files of their own (verified
+       against the component sources). Add them back if a future component
+       here actually needs JS. -->
   <style>{REPORT_CSS}</style>
 </head>
 <body>
@@ -506,7 +512,6 @@ def render(gsa, snap, ha_origins, ha_cwv, ha_a11y):
 
 </main>
 </div>
-<script src="assets/uswds/js/uswds.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js" integrity="sha512-vc58qvvBdrDR4etbxMdlTt4GBQk1qjvyORR2nrsPsFPyrs+/u5c3+1Ct6upOgdZoIl7eq6k3a1UPDSNAQi/32A==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="assets/report.js"></script>
 <script type="application/json" id="report-chart-data">{json.dumps(chart_data)}</script>
