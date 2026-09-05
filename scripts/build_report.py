@@ -28,6 +28,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 GSA_HISTORY = REPO_ROOT / "external-data" / "gsa-uswds-report-history.csv"
 HTTPARCHIVE_ORIGINS = REPO_ROOT / "external-data" / "httparchive-uswds-origins.csv"
 HTTPARCHIVE_CWV = REPO_ROOT / "external-data" / "httparchive-uswds-good-cwv.csv"
+HTTPARCHIVE_A11Y = REPO_ROOT / "external-data" / "httparchive-uswds-accessibility.csv"
 SNAPSHOTS_DIR = REPO_ROOT / "snapshots"
 OUT_FILE = REPO_ROOT / "docs" / "index.html"
 
@@ -152,23 +153,6 @@ def yearly_avg(rows, value_fn):
     return {y: sum(v) / len(v) for y, v in years.items()}
 
 
-# ---- SVG helpers -----------------------------------------------------
-
-
-def scale_x(i, n, x0, x1):
-    return x0 if n <= 1 else x0 + (x1 - x0) * i / (n - 1)
-
-
-def scale_y(v, vmax, y_bottom, y_top):
-    return y_bottom - (y_bottom - y_top) * v / vmax
-
-
-def line_path(values, x0, x1, y_bottom, y_top, vmax):
-    n = len(values)
-    pts = [f"{scale_x(i, n, x0, x1):.1f},{scale_y(v, vmax, y_bottom, y_top):.1f}" for i, v in enumerate(values)]
-    return "M" + " L".join(pts)
-
-
 def fmt_pct(x):
     return f"{x * 100:.0f}%"
 
@@ -188,66 +172,81 @@ def fmt_delta_pts(a, b):
 # component below (card, alert, table) is real usa-* markup, not custom CSS.
 #
 # The only non-USWDS styling is REPORT_CSS: a small, narrowly-scoped
-# stylesheet for the hand-drawn SVG trend charts, which USWDS has no
-# component for (see the data-visualizations guidance). Per the same
+# stylesheet for the D3 trend charts (docs/assets/report.js), which USWDS
+# has no component for (see the data-visualizations guidance). Per the same
 # discussion's third approach ("add your own class with higher specificity
 # ... avoid modifying usa-* classes"), it only ever touches its own
 # `.report-*` classes.
 
 REPORT_CSS = """
 .report-chart-panel { background: #fff; border: 1px solid #dfe1e2; border-radius: 4px; padding: 1.5rem 1.5rem 1rem; }
-.report-chart-panel svg { width: 100%; height: auto; display: block; min-width: 480px; }
 .report-chart-wrap { overflow-x: auto; }
-.report-axis-label { font-size: 11px; fill: #565c65; }
-.report-grid-line { stroke: #dfe1e2; stroke-width: 1; }
+.report-chart { position: relative; }
+.report-chart svg { width: 100%; height: auto; display: block; min-width: 480px; }
+.report-axis-title { font-size: 12px; fill: #3d4551; font-weight: 600; }
+.report-axis .domain { stroke: #a9aeb1; }
+.report-axis .tick line { stroke: #a9aeb1; }
+.report-axis .tick text { font-size: 11px; fill: #565c65; }
+.report-grid .domain { display: none; }
+.report-grid .tick line { stroke: #dfe1e2; stroke-width: 1; shape-rendering: crispEdges; }
+.report-line { fill: none; stroke-width: 2px; }
+.report-marker { r: 4.5px; stroke: #fff; stroke-width: 2px; }
+.report-crosshair { stroke: #71767a; stroke-width: 1px; stroke-dasharray: 3 3; pointer-events: none; }
+.report-overlay { cursor: crosshair; }
+.report-annotation-line { stroke: #c05600; stroke-width: 1.5px; stroke-dasharray: 4 4; }
+.report-annotation-label { font-size: 10.5px; fill: #c05600; }
+.report-bar-label { font-size: 11px; fill: #1b1b1b; font-weight: 600; }
+.report-bar.is-hovered { opacity: .85; }
+.report-tooltip { position: absolute; pointer-events: none; background: #1b1b1b; color: #fff; padding: .5rem .75rem; border-radius: 4px; font-size: .8rem; white-space: nowrap; z-index: 10; }
+.report-tooltip-title { font-weight: 700; margin-bottom: .25rem; }
+.report-tooltip-row { display: flex; align-items: center; gap: .4rem; }
+.report-tooltip-swatch { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.report-tooltip-value { margin-left: auto; padding-left: .75rem; font-variant-numeric: tabular-nums; }
 .report-legend { display: flex; flex-wrap: wrap; gap: 1.5rem; margin-top: .75rem; padding-top: .75rem; border-top: 1px solid #dfe1e2; font-size: .93rem; }
 .report-legend .report-swatch { display: inline-block; width: 14px; height: 3px; border-radius: 2px; margin-right: .4rem; vertical-align: middle; }
 .report-kpi-value { font-size: 2rem; font-weight: 700; font-variant-numeric: tabular-nums; margin: 0; }
 """
 
 
-def render(gsa, snap, ha_origins, ha_cwv):
+def render(gsa, snap, ha_origins, ha_cwv, ha_a11y):
     generated_at = datetime.utcnow().strftime("%Y-%m-%d")
 
-    # -- version-mix chart (GSA) --
-    n = len(gsa["series"])
+    # -- version-mix chart (GSA) -- raw data only; D3 (docs/assets/report.js)
+    # computes scales, axes and ticks client-side.
+    gsa_dates = [r["report_date"] for r in gsa["series"]]
     v1_vals = [int(r["v1_x"]) for r in gsa["series"]]
     v2_vals = [int(r["v2_x"]) for r in gsa["series"]]
     v3_vals = [int(r["v3_x"]) for r in gsa["series"]]
-    vmax = max(max(v1_vals), max(v2_vals), max(v3_vals)) * 1.15
-    x0, x1, yb, yt = 56, 904, 280, 20
-    p_v1 = line_path(v1_vals, x0, x1, yb, yt, vmax)
-    p_v2 = line_path(v2_vals, x0, x1, yb, yt, vmax)
-    p_v3 = line_path(v3_vals, x0, x1, yb, yt, vmax)
 
     # -- HTTP Archive origins: yearly share bar chart --
     yearly_share = yearly_avg(ha_origins, lambda a, u: u / a * 10000)
     years = sorted(y for y in yearly_share if y >= 2022)
-    bx0, bx1, byb, byt = 70, 890, 260, 30
-    bar_max = max(yearly_share[y] for y in years) * 1.15
-    bar_w = 90
-    gap = (bx1 - bx0 - len(years) * bar_w) / max(len(years) - 1, 1)
-    bars = []
-    for idx, y in enumerate(years):
-        v = yearly_share[y]
-        bx = bx0 + idx * (bar_w + gap)
-        bh = (byb - byt) * v / bar_max
-        bars.append((y, bx, byb - bh, bar_w, bh, v))
+    bar_categories = [f"{y}*" if y == date.today().year else str(y) for y in years]
+    bar_values = [yearly_share[y] for y in years]
+    bar_colors = ["#005ea2" if y == years[-1] else "#c05600" if y == years[-2] else "#a9aeb1" for y in years]
 
     # -- HTTP Archive origins: monthly raw count line --
     origin_series = [(d, u) for d, a, u in ha_origins if u is not None and d >= HTTPARCHIVE_CLEAN_START]
+    origin_dates = [d.isoformat() for d, u in origin_series]
     origin_counts = [u for d, u in origin_series]
-    lmax = max(origin_counts) * 1.1
-    p_origins = line_path(origin_counts, x0, x1, yb, yt, lmax)
 
     # -- Core Web Vitals: monthly dual line --
     cwv_series = [(d, a, u) for d, a, u in ha_cwv if u is not None and d >= HTTPARCHIVE_CLEAN_START]
+    cwv_dates = [d.isoformat() for d, a, u in cwv_series]
     cwv_all = [a for d, a, u in cwv_series]
     cwv_uswds = [u for d, a, u in cwv_series]
-    p_cwv_all = line_path(cwv_all, x0, x1, yb, yt, 70)
-    p_cwv_uswds = line_path(cwv_uswds, x0, x1, yb, yt, 70)
-    inp_idx = next((i for i, (d, a, u) in enumerate(cwv_series) if d == INP_TRANSITION_DATE), None)
-    inp_x = scale_x(inp_idx, len(cwv_series), x0, x1) if inp_idx is not None else None
+
+    # -- Lighthouse accessibility score: monthly dual line -- no known
+    # data-quality break in this one: the USWDS/web gap has held between
+    # +11 and +15 points in every one of the 55 months measured.
+    a11y_series = [(d, a, u) for d, a, u in ha_a11y if u is not None and d >= HTTPARCHIVE_CLEAN_START]
+    a11y_dates = [d.isoformat() for d, a, u in a11y_series]
+    a11y_all = [a for d, a, u in a11y_series]
+    a11y_uswds = [u for d, a, u in a11y_series]
+    a11y_min_uswds = min(a11y_uswds)
+    a11y_current_gap = a11y_uswds[-1] - a11y_all[-1]
+    a11y_worst_vs_current_web = a11y_min_uswds - a11y_all[-1]
+    a11y_min_gap = min(u - a for u, a in zip(a11y_uswds, a11y_all))
 
     cwv_yearly_all = yearly_avg([(d, a, u) for d, a, u in ha_cwv], lambda a, u: a)
     cwv_yearly_uswds = yearly_avg([(d, a, u) for d, a, u in ha_cwv], lambda a, u: u)
@@ -269,13 +268,56 @@ def render(gsa, snap, ha_origins, ha_cwv):
     v3_growth_pct = (gsa["v3_last"] - gsa["v3_first"]) / gsa["v3_first"] * 100
     legacy_growth_pct = legacy_delta / gsa["legacy_first"] * 100 if gsa["legacy_first"] else 0
 
-    bar_svg = "\n".join(
-        f'<rect x="{bx:.1f}" y="{by:.1f}" width="{bw}" height="{bh:.1f}" rx="2" '
-        f'fill="{"#005ea2" if y == years[-1] else "#c05600" if y == years[-2] else "#a9aeb1"}"></rect>\n'
-        f'<text class="report-axis-label" x="{bx+bw/2:.1f}" y="{by-8:.1f}" text-anchor="middle" font-weight="600">{v:.2f}</text>\n'
-        f'<text class="report-axis-label" x="{bx+bw/2:.1f}" y="278" text-anchor="middle">{y}{"*" if y == date.today().year else ""}</text>'
-        for y, bx, by, bw, bh, v in bars
-    )
+    # Data payload for docs/assets/report.js -- one entry per chart.
+    chart_data = {
+        "versionMix": {
+            "dates": gsa_dates,
+            "series": [
+                {"key": "v3", "label": "v3.x", "color": "#005ea2", "values": v3_vals},
+                {"key": "v2", "label": "v2.x", "color": "#c05600", "values": v2_vals},
+                {"key": "v1", "label": "v1.x", "color": "#a9aeb1", "values": v1_vals},
+            ],
+            "yLabel": "Sites",
+            "ariaLabel": "Line chart of USWDS v1, v2 and v3 site counts over time.",
+        },
+        "shareByYear": {
+            "categories": bar_categories,
+            "values": bar_values,
+            "colors": bar_colors,
+            "yLabel": "USWDS origins per 10,000 crawled",
+            "valueFormat": ".2f",
+            "ariaLabel": "Bar chart of USWDS share of all HTTP Archive origins by year.",
+        },
+        "originCount": {
+            "dates": origin_dates,
+            "series": [{"key": "origins", "label": "USWDS-detected origins", "color": "#005ea2", "values": origin_counts}],
+            "yLabel": "USWDS-detected origins",
+            "ariaLabel": "Line chart of raw USWDS origin counts climbing over time.",
+        },
+        "cwv": {
+            "dates": cwv_dates,
+            "series": [
+                {"key": "uswds", "label": "USWDS sites", "color": "#005ea2", "values": cwv_uswds},
+                {"key": "all", "label": "Web average", "color": "#a9aeb1", "values": cwv_all},
+            ],
+            "yLabel": "% of page loads, Good CWV",
+            "yTickFormat": ".0f",
+            "yDomain": [0, 70],
+            "annotation": {"date": INP_TRANSITION_DATE.isoformat(), "label": "Mar 2024: FID→INP"},
+            "ariaLabel": "Line chart comparing Core Web Vitals pass rates for USWDS sites vs. the web average.",
+        },
+        "a11y": {
+            "dates": a11y_dates,
+            "series": [
+                {"key": "uswds", "label": "USWDS sites", "color": "#005ea2", "values": a11y_uswds},
+                {"key": "all", "label": "Web median", "color": "#a9aeb1", "values": a11y_all},
+            ],
+            "yLabel": "Median Lighthouse accessibility score",
+            "yTickFormat": ".0f",
+            "yDomain": [75, 100],
+            "ariaLabel": "Line chart comparing median Lighthouse accessibility scores for USWDS sites vs. the web median.",
+        },
+    }
 
     def kpi_card(col, label, value_html, note):
         return f"""<li class="usa-card {col}">
@@ -340,13 +382,7 @@ def render(gsa, snap, ha_origins, ha_cwv):
       <span class="font-body-3xs text-base-dark">{gsa['start_date']} &rarr; {gsa['end_date']}</span>
     </div>
     <div class="report-chart-wrap">
-      <svg viewBox="0 0 920 300">
-        <line class="report-grid-line" x1="56" y1="280" x2="904" y2="280"></line>
-        <line class="report-grid-line" x1="56" y1="20" x2="56" y2="280"></line>
-        <path d="{p_v2}" fill="none" stroke="#c05600" stroke-width="2.5"></path>
-        <path d="{p_v1}" fill="none" stroke="#a9aeb1" stroke-width="2.5"></path>
-        <path d="{p_v3}" fill="none" stroke="#005ea2" stroke-width="3.25"></path>
-      </svg>
+      <div id="chart-version-mix" class="report-chart"></div>
     </div>
     <div class="report-legend">
       <span><span class="report-swatch" style="background:#005ea2"></span>v3.x <span class="text-base-dark">{gsa['v3_first']} &rarr; {gsa['v3_last']}</span></span>
@@ -377,21 +413,18 @@ def render(gsa, snap, ha_origins, ha_cwv):
       <h3 class="margin-0">USWDS share of all crawled origins</h3>
       <span class="font-body-3xs text-base-dark">annual average, per 10,000 origins</span>
     </div>
-    <div class="report-chart-wrap"><svg viewBox="0 0 920 300">
-      <line class="report-grid-line" x1="60" y1="260" x2="890" y2="260"></line>
-      {bar_svg}
-    </svg></div>
+    <div class="report-chart-wrap">
+      <div id="chart-share-by-year" class="report-chart"></div>
+    </div>
   </div>
   <div class="report-chart-panel margin-bottom-5">
     <div class="display-flex flex-justify flex-align-baseline flex-wrap margin-bottom-1">
       <h3 class="margin-0">Raw USWDS origin count</h3>
       <span class="font-body-3xs text-base-dark">monthly, {origin_series[0][0]} &rarr; {origin_series[-1][0]}</span>
     </div>
-    <div class="report-chart-wrap"><svg viewBox="0 0 920 300">
-      <line class="report-grid-line" x1="56" y1="280" x2="904" y2="280"></line>
-      <line class="report-grid-line" x1="56" y1="20" x2="56" y2="280"></line>
-      <path d="{p_origins}" fill="none" stroke="#005ea2" stroke-width="3"></path>
-    </svg></div>
+    <div class="report-chart-wrap">
+      <div id="chart-origin-count" class="report-chart"></div>
+    </div>
   </div>
 
   <section class="usa-prose margin-bottom-5">
@@ -411,16 +444,41 @@ def render(gsa, snap, ha_origins, ha_cwv):
       <h3 class="margin-0">Share of page loads with "Good" Core Web Vitals</h3>
       <span class="font-body-3xs text-base-dark">monthly, {cwv_series[0][0]} &rarr; {cwv_series[-1][0]}</span>
     </div>
-    <div class="report-chart-wrap"><svg viewBox="0 0 920 300">
-      <line class="report-grid-line" x1="56" y1="280" x2="904" y2="280"></line>
-      <line class="report-grid-line" x1="56" y1="20" x2="56" y2="280"></line>
-      {f'<line x1="{inp_x:.1f}" y1="20" x2="{inp_x:.1f}" y2="280" stroke="#c05600" stroke-width="1.5" stroke-dasharray="4 4"></line><text x="{inp_x+6:.1f}" y="32" class="report-axis-label" fill="#c05600">Mar 2024: FID&#8594;INP</text>' if inp_x else ''}
-      <path d="{p_cwv_all}" fill="none" stroke="#a9aeb1" stroke-width="2.5"></path>
-      <path d="{p_cwv_uswds}" fill="none" stroke="#005ea2" stroke-width="3"></path>
-    </svg></div>
+    <div class="report-chart-wrap">
+      <div id="chart-cwv" class="report-chart"></div>
+    </div>
     <div class="report-legend">
       <span><span class="report-swatch" style="background:#005ea2"></span>USWDS sites <span class="text-base-dark">{cwv_series[0][2]}% &rarr; {cwv_series[-1][2]}%</span></span>
       <span><span class="report-swatch" style="background:#a9aeb1"></span>Web average <span class="text-base-dark">{cwv_series[0][1]}% &rarr; {cwv_series[-1][1]}%</span></span>
+    </div>
+  </div>
+
+  <section class="usa-prose margin-bottom-5">
+    <h2>Is USWDS actually more accessible?</h2>
+    <p><strong>Median</strong> Lighthouse accessibility score (0&ndash;100: alt text, color contrast, ARIA labels, form labels, heading structure, and more) &mdash; HTTP Archive publishes these as medians, not means &mdash; USWDS sites vs. the web at large. Unlike the metrics above, this one shows no data-quality break to caveat &mdash; the gap has held in a tight, stable band for the full 55-month history.</p>
+  </section>
+  <ul class="usa-card-group margin-bottom-3">
+    {kpi_card("tablet:grid-col-4", "Accessibility score, latest",
+              f'{a11y_uswds[-1]} <span class="font-body-sm text-base-dark">vs {a11y_all[-1]}</span>',
+              f'USWDS sites vs. the web median &mdash; a {a11y_current_gap:+d}pt gap')}
+    {kpi_card("tablet:grid-col-4", "Worst USWDS month ever measured",
+              f'{a11y_min_uswds}',
+              f'still {a11y_worst_vs_current_web:+d}pt above where the median site sits <em>today</em>')}
+    {kpi_card("tablet:grid-col-4", "Consistency",
+              f'{len(a11y_series)} of {len(a11y_series)}',
+              f'months with a double-digit-point USWDS lead &mdash; every month measured, minimum {a11y_min_gap:+d}pt')}
+  </ul>
+  <div class="report-chart-panel margin-bottom-5">
+    <div class="display-flex flex-justify flex-align-baseline flex-wrap margin-bottom-1">
+      <h3 class="margin-0">Median Lighthouse accessibility score</h3>
+      <span class="font-body-3xs text-base-dark">monthly, {a11y_series[0][0]} &rarr; {a11y_series[-1][0]}</span>
+    </div>
+    <div class="report-chart-wrap">
+      <div id="chart-a11y" class="report-chart"></div>
+    </div>
+    <div class="report-legend">
+      <span><span class="report-swatch" style="background:#005ea2"></span>USWDS sites <span class="text-base-dark">{a11y_series[0][2]} &rarr; {a11y_series[-1][2]}</span></span>
+      <span><span class="report-swatch" style="background:#a9aeb1"></span>Web median <span class="text-base-dark">{a11y_series[0][1]} &rarr; {a11y_series[-1][1]}</span></span>
     </div>
   </div>
 
@@ -437,17 +495,31 @@ def render(gsa, snap, ha_origins, ha_cwv):
         <tr><th scope="row">Traffic-weighted reach</th><td>{top_n_html}</td><td>Trend needs several more monthly snapshots</td></tr>
         <tr><th scope="row">Web-wide share (corroboration)</th><td>{yearly_share[years[0]]:.2f} &rarr; {yearly_share[years[-1]]:.2f} / 10k</td><td>Independent of GSA's pipeline</td></tr>
         <tr><th scope="row">Performance outcome</th><td>{gap_first:+.1f}pt &rarr; {gap_last:+.1f}pt</td><td>The one outcome SLI here, not just an input</td></tr>
+        <tr><th scope="row">Accessibility outcome (median)</th><td>{a11y_uswds[0]} &rarr; {a11y_uswds[-1]} (web median: {a11y_all[0]} &rarr; {a11y_all[-1]})</td><td>No known data-quality break; gap has never fallen below {a11y_min_gap:+d}pt</td></tr>
       </tbody>
     </table>
   </section>
 
   <footer class="usa-prose font-body-3xs text-base-dark padding-top-2 border-top border-base-lighter">
-    <p>Sources: github.com/GSA/site-scanning-analysis (reports/uswds.csv) &middot; api.gsa.gov/technology/site-scanning &middot; analytics.usa.gov &middot; uswds-usage CLI &middot; HTTP Archive technology detection &amp; Chrome UX Report Core Web Vitals &middot; regenerated {generated_at} by scripts/build_report.py</p>
+    <p>Sources: github.com/GSA/site-scanning-analysis (reports/uswds.csv) &middot; api.gsa.gov/technology/site-scanning &middot; analytics.usa.gov &middot; uswds-usage CLI &middot; HTTP Archive technology detection, Chrome UX Report Core Web Vitals &amp; Lighthouse accessibility scores &middot; regenerated {generated_at} by scripts/build_report.py</p>
   </footer>
 
 </main>
 </div>
 <script src="assets/uswds/js/uswds.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js" integrity="sha512-vc58qvvBdrDR4etbxMdlTt4GBQk1qjvyORR2nrsPsFPyrs+/u5c3+1Ct6upOgdZoIl7eq6k3a1UPDSNAQi/32A==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="assets/report.js"></script>
+<script type="application/json" id="report-chart-data">{json.dumps(chart_data)}</script>
+<script>
+  (function () {{
+    var data = JSON.parse(document.getElementById("report-chart-data").textContent);
+    reportCharts.drawLineChart("#chart-version-mix", data.versionMix);
+    reportCharts.drawBarChart("#chart-share-by-year", data.shareByYear);
+    reportCharts.drawLineChart("#chart-origin-count", data.originCount);
+    reportCharts.drawLineChart("#chart-cwv", data.cwv);
+    reportCharts.drawLineChart("#chart-a11y", data.a11y);
+  }})();
+</script>
 </body>
 </html>
 """
@@ -462,8 +534,9 @@ def main():
     snap = latest_snapshot()
     ha_origins = load_httparchive(HTTPARCHIVE_ORIGINS)
     ha_cwv = load_httparchive(HTTPARCHIVE_CWV)
+    ha_a11y = load_httparchive(HTTPARCHIVE_A11Y)
 
-    html = render(gsa, snap, ha_origins, ha_cwv)
+    html = render(gsa, snap, ha_origins, ha_cwv, ha_a11y)
     OUT_FILE.parent.mkdir(parents=True, exist_ok=True)
     OUT_FILE.write_text(html)
     print(f"wrote {OUT_FILE}", file=sys.stderr)

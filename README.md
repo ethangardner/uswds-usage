@@ -235,6 +235,19 @@ average every year since tracking began, and the gap has widened each year:
 third Core Web Vital that month), not a data error; both recover over the
 following months and the USWDS-vs-web gap is unaffected.
 
+## `external-data/httparchive-uswds-accessibility.csv`
+
+Same shape (`DateTime,ALL,USWDS`), monthly **median** Lighthouse
+accessibility score (0–100) — HTTP Archive publishes these as medians, not
+means — USWDS sites vs. the web median. No known data-quality break here
+— unlike the other two HTTP Archive files, the gap has held between +11 and
++15 points in every single one of the 55 months measured (Jan 2022–Jul
+2026); USWDS has stayed in the mid-90s to high-90s the whole time (near the
+practical ceiling for automated accessibility auditing) while the web
+median has only slowly climbed from ~82 to ~86. Worth noting when a fresh
+export is dropped in: this is the one series where you'd actually notice if
+something changed, since it's been this stable for 4.5 years.
+
 ## Source files
 
 | File               | Responsibility                                                                 |
