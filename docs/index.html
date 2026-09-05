@@ -48,7 +48,7 @@
   <section class="usa-prose margin-bottom-5">
     <p class="font-body-3xs text-uppercase text-primary text-bold">Program health &middot; generated 2026-09-05</p>
     <h1>USWDS Adoption Pulse</h1>
-    <p class="usa-intro">Where federal USWDS adoption stands, whether it's moving, whether it actually performs better, and what an executive can trust in these numbers. Regenerated monthly from GSA's site-scanning history, this tool's own live snapshot, and an independent, web-wide corroboration from HTTP Archive.</p>
+    <p class="usa-intro">Where federal USWDS adoption stands, whether it's moving, and whether it actually performs better. Regenerated monthly from GSA's site-scanning history, this tool's own live snapshot, and an independent, web-wide corroboration from HTTP Archive.</p>
   </section>
 
   <section class="usa-prose margin-bottom-5">
@@ -118,14 +118,6 @@
       <span><span class="report-swatch" style="background:#005ea2"></span>v3.x <span class="text-base-dark">264 &rarr; 397</span></span>
       <span><span class="report-swatch" style="background:#c05600"></span>v2.x <span class="text-base-dark">151 &rarr; 137</span></span>
       <span><span class="report-swatch" style="background:#a9aeb1"></span>v1.x <span class="text-base-dark">&rarr; 20</span></span>
-    </div>
-  </div>
-
-  <div class="usa-alert usa-alert--warning margin-bottom-5" role="region" aria-label="Data quality note">
-    <div class="usa-alert__body">
-      <h4 class="usa-alert__heading">Known exclusion</h4>
-      <p class="usa-alert__text">GSA's "Fix USWDS report" commit on 2026-03-25 changed the filtered-cohort calculation (~10x jump). All figures above start at 2026-03-25. 2026-06-26 (a single broken scan day) is also excluded.</p>
-      <p class="usa-alert__text">This report re-checks for new anomalies of the same shape on every run (see build log) &mdash; if one is flagged, verify it before trusting this page.</p>
     </div>
   </div>
 
@@ -209,7 +201,7 @@
 
   <section class="usa-prose margin-bottom-5">
     <h2>Is USWDS actually more accessible?</h2>
-    <p><strong>Median</strong> Lighthouse accessibility score (0&ndash;100: alt text, color contrast, ARIA labels, form labels, heading structure, and more) &mdash; HTTP Archive publishes these as medians, not means &mdash; USWDS sites vs. the web at large. Unlike the metrics above, this one shows no data-quality break to caveat &mdash; the gap has held in a tight, stable band for the full 55-month history.</p>
+    <p><strong>Median</strong> Lighthouse accessibility score (0&ndash;100: alt text, color contrast, ARIA labels, form labels, heading structure, and more) &mdash; HTTP Archive publishes these as medians, not means &mdash; USWDS sites vs. the web at large. The gap has held in a tight, stable band for the full 55-month history.</p>
   </section>
   <ul class="usa-card-group margin-bottom-3">
     <li class="usa-card tablet:grid-col-4">
@@ -260,26 +252,10 @@
     </div>
   </div>
 
-  <section class="usa-prose margin-bottom-5">
-    <h2>SLIs tracked here</h2>
-    <table class="usa-table usa-table--striped width-full">
-      <caption>USWDS program-health SLIs, computed by scripts/build_report.py &mdash; regenerated 2026-09-05</caption>
-      <thead>
-        <tr><th scope="col">SLI</th><th scope="col">Current</th><th scope="col">Caveat</th></tr>
-      </thead>
-      <tbody>
-        <tr><th scope="row">Version-major currency (v3.x share of majors)</th><td>60% &rarr; 72%</td><td>Pair with version-reporting coverage</td></tr>
-        <tr><th scope="row">Version reporting coverage</th><td>27% &rarr; 33%</td><td>Two-thirds of adopters still unmeasured on this axis</td></tr>
-        <tr><th scope="row">Traffic-weighted reach</th><td>29%</td><td>Trend needs several more monthly snapshots</td></tr>
-        <tr><th scope="row">Web-wide share (corroboration)</th><td>0.63 &rarr; 1.14 / 10k</td><td>Independent of GSA's pipeline</td></tr>
-        <tr><th scope="row">Performance outcome</th><td>+2.9pt &rarr; +10.1pt</td><td>The one outcome SLI here, not just an input</td></tr>
-        <tr><th scope="row">Accessibility outcome (median)</th><td>97 &rarr; 97 (web median: 82 &rarr; 86)</td><td>No known data-quality break; gap has never fallen below +11pt</td></tr>
-      </tbody>
-    </table>
-  </section>
-
   <footer class="usa-prose font-body-3xs text-base-dark padding-top-2 border-top border-base-lighter">
     <p>Sources: github.com/GSA/site-scanning-analysis (reports/uswds.csv) &middot; api.gsa.gov/technology/site-scanning &middot; analytics.usa.gov &middot; uswds-usage CLI &middot; HTTP Archive technology detection, Chrome UX Report Core Web Vitals &amp; Lighthouse accessibility scores &middot; regenerated 2026-09-05 by scripts/build_report.py</p>
+    <p>GSA's "Fix USWDS report" commit on 2026-03-25 changed how the filtered-cohort figures above are calculated (~10x jump), so this report starts at 2026-03-25; 2026-06-26 (a single broken scan day) is excluded too. Re-scanned for new breaks of the same shape on every run (see build log).</p>
+    <p>SLIs: version-major currency 60% &rarr; 72% &middot; version reporting coverage 27% &rarr; 33% &middot; traffic-weighted reach 29% &middot; web-wide share 0.63 &rarr; 1.14 per 10k origins &middot; performance gap +2.9pt &rarr; +10.1pt &middot; accessibility gap (median) +15pt &rarr; +11pt.</p>
   </footer>
 
 </main>

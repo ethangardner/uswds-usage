@@ -18,9 +18,7 @@
 // list is still complete, e.g. after adding a new usa-* class to the page):
 //   grep -o 'class="[^"]*"' docs/index.html | tr ' ' '\n' | sort -u
 //
-//   usa-alert, usa-alert__*        -> usa-alert
 //   usa-card, usa-card__*          -> usa-card
-//   usa-table, usa-table--striped  -> usa-table
 //   usa-prose, usa-intro           -> uswds-typography
 //   grid-container, grid-col-*     -> usa-layout-grid
 //   everything else (reset, fonts, -> uswds-global
@@ -28,12 +26,15 @@
 //   text-*, font-*, margin-*, etc. -> uswds-utilities (trimmed further by
 //                                     $output-these-utilities, see
 //                                     _uswds-theme.scss)
+//
+// usa-alert and usa-table aren't forwarded -- neither is used on the page
+// (the data-quality note and SLI table both moved to plain-text fine print
+// in the footer). Add them back (and re-run the grep above) if either
+// returns to the main content.
 @forward "uswds-global";
 @forward "uswds-typography";
 @forward "usa-layout-grid/src/styles";
 @forward "usa-card/src/styles";
-@forward "usa-alert/src/styles";
-@forward "usa-table/src/styles";
 @forward "uswds-utilities/src/styles";
 
 @forward "uswds-theme-custom-styles";

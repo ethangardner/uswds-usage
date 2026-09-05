@@ -358,7 +358,7 @@ def render(gsa, snap, ha_origins, ha_cwv, ha_a11y):
   <section class="usa-prose margin-bottom-5">
     <p class="font-body-3xs text-uppercase text-primary text-bold">Program health &middot; generated {generated_at}</p>
     <h1>USWDS Adoption Pulse</h1>
-    <p class="usa-intro">Where federal USWDS adoption stands, whether it's moving, whether it actually performs better, and what an executive can trust in these numbers. Regenerated monthly from GSA's site-scanning history, this tool's own live snapshot, and an independent, web-wide corroboration from HTTP Archive.</p>
+    <p class="usa-intro">Where federal USWDS adoption stands, whether it's moving, and whether it actually performs better. Regenerated monthly from GSA's site-scanning history, this tool's own live snapshot, and an independent, web-wide corroboration from HTTP Archive.</p>
   </section>
 
   <section class="usa-prose margin-bottom-5">
@@ -394,14 +394,6 @@ def render(gsa, snap, ha_origins, ha_cwv, ha_a11y):
       <span><span class="report-swatch" style="background:#005ea2"></span>v3.x <span class="text-base-dark">{gsa['v3_first']} &rarr; {gsa['v3_last']}</span></span>
       <span><span class="report-swatch" style="background:#c05600"></span>v2.x <span class="text-base-dark">{gsa['v2_first']} &rarr; {gsa['v2_last']}</span></span>
       <span><span class="report-swatch" style="background:#a9aeb1"></span>v1.x <span class="text-base-dark">&rarr; {gsa['v1_last']}</span></span>
-    </div>
-  </div>
-
-  <div class="usa-alert usa-alert--warning margin-bottom-5" role="region" aria-label="Data quality note">
-    <div class="usa-alert__body">
-      <h4 class="usa-alert__heading">Known exclusion</h4>
-      <p class="usa-alert__text">GSA's "Fix USWDS report" commit on 2026-03-25 changed the filtered-cohort calculation (~10x jump). All figures above start at {GSA_CLEAN_START}. 2026-06-26 (a single broken scan day) is also excluded.</p>
-      <p class="usa-alert__text">This report re-checks for new anomalies of the same shape on every run (see build log) &mdash; if one is flagged, verify it before trusting this page.</p>
     </div>
   </div>
 
@@ -461,7 +453,7 @@ def render(gsa, snap, ha_origins, ha_cwv, ha_a11y):
 
   <section class="usa-prose margin-bottom-5">
     <h2>Is USWDS actually more accessible?</h2>
-    <p><strong>Median</strong> Lighthouse accessibility score (0&ndash;100: alt text, color contrast, ARIA labels, form labels, heading structure, and more) &mdash; HTTP Archive publishes these as medians, not means &mdash; USWDS sites vs. the web at large. Unlike the metrics above, this one shows no data-quality break to caveat &mdash; the gap has held in a tight, stable band for the full 55-month history.</p>
+    <p><strong>Median</strong> Lighthouse accessibility score (0&ndash;100: alt text, color contrast, ARIA labels, form labels, heading structure, and more) &mdash; HTTP Archive publishes these as medians, not means &mdash; USWDS sites vs. the web at large. The gap has held in a tight, stable band for the full 55-month history.</p>
   </section>
   <ul class="usa-card-group margin-bottom-3">
     {kpi_card("tablet:grid-col-4", "Accessibility score, latest",
@@ -488,26 +480,10 @@ def render(gsa, snap, ha_origins, ha_cwv, ha_a11y):
     </div>
   </div>
 
-  <section class="usa-prose margin-bottom-5">
-    <h2>SLIs tracked here</h2>
-    <table class="usa-table usa-table--striped width-full">
-      <caption>USWDS program-health SLIs, computed by scripts/build_report.py &mdash; regenerated {generated_at}</caption>
-      <thead>
-        <tr><th scope="col">SLI</th><th scope="col">Current</th><th scope="col">Caveat</th></tr>
-      </thead>
-      <tbody>
-        <tr><th scope="row">Version-major currency (v3.x share of majors)</th><td>{fmt_pct(gsa['v3_share_first'])} &rarr; {fmt_pct(gsa['v3_share_last'])}</td><td>Pair with version-reporting coverage</td></tr>
-        <tr><th scope="row">Version reporting coverage</th><td>{fmt_pct(gsa['version_coverage_first'])} &rarr; {fmt_pct(gsa['version_coverage_last'])}</td><td>Two-thirds of adopters still unmeasured on this axis</td></tr>
-        <tr><th scope="row">Traffic-weighted reach</th><td>{top_n_html}</td><td>Trend needs several more monthly snapshots</td></tr>
-        <tr><th scope="row">Web-wide share (corroboration)</th><td>{yearly_share[years[0]]:.2f} &rarr; {yearly_share[years[-1]]:.2f} / 10k</td><td>Independent of GSA's pipeline</td></tr>
-        <tr><th scope="row">Performance outcome</th><td>{gap_first:+.1f}pt &rarr; {gap_last:+.1f}pt</td><td>The one outcome SLI here, not just an input</td></tr>
-        <tr><th scope="row">Accessibility outcome (median)</th><td>{a11y_uswds[0]} &rarr; {a11y_uswds[-1]} (web median: {a11y_all[0]} &rarr; {a11y_all[-1]})</td><td>No known data-quality break; gap has never fallen below {a11y_min_gap:+d}pt</td></tr>
-      </tbody>
-    </table>
-  </section>
-
   <footer class="usa-prose font-body-3xs text-base-dark padding-top-2 border-top border-base-lighter">
     <p>Sources: github.com/GSA/site-scanning-analysis (reports/uswds.csv) &middot; api.gsa.gov/technology/site-scanning &middot; analytics.usa.gov &middot; uswds-usage CLI &middot; HTTP Archive technology detection, Chrome UX Report Core Web Vitals &amp; Lighthouse accessibility scores &middot; regenerated {generated_at} by scripts/build_report.py</p>
+    <p>GSA's "Fix USWDS report" commit on 2026-03-25 changed how the filtered-cohort figures above are calculated (~10x jump), so this report starts at {GSA_CLEAN_START}; 2026-06-26 (a single broken scan day) is excluded too. Re-scanned for new breaks of the same shape on every run (see build log).</p>
+    <p>SLIs: version-major currency {fmt_pct(gsa['v3_share_first'])} &rarr; {fmt_pct(gsa['v3_share_last'])} &middot; version reporting coverage {fmt_pct(gsa['version_coverage_first'])} &rarr; {fmt_pct(gsa['version_coverage_last'])} &middot; traffic-weighted reach {top_n_html} &middot; web-wide share {yearly_share[years[0]]:.2f} &rarr; {yearly_share[years[-1]]:.2f} per 10k origins &middot; performance gap {gap_first:+.1f}pt &rarr; {gap_last:+.1f}pt &middot; accessibility gap (median) {a11y_uswds[0]-a11y_all[0]:+d}pt &rarr; {a11y_current_gap:+d}pt.</p>
   </footer>
 
 </main>
