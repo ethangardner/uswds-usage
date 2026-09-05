@@ -1,0 +1,48 @@
+name: Monthly USWDS Adoption Pulse
+
+on:
+  schedule:
+    # 12:00 UTC on the 1st of every month
+    - cron: "0 12 1 * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.3"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Build uswds-usage
+        run: go build -o uswds-usage .
+
+      - name: Run live report (writes snapshots/<today>/)
+        run: ./uswds-usage report
+
+      - name: Refresh GSA site-scanning-analysis history
+        run: python3 scripts/refresh_gsa_history.py
+
+      - name: Build the USWDS theme (CSS + fonts/icons/js)
+        run: npm ci && npm run build
+
+      - name: Regenerate docs/index.html
+        run: python3 scripts/build_report.py
+
+      - name: Commit updated data and report
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add snapshots/ external-data/gsa-uswds-report-history.csv docs/
+          git diff --cached --quiet && echo "no changes to commit" && exit 0
+          git commit -m "Monthly USWDS Adoption Pulse: $(date -u +%Y-%m-%d)"
+          git push

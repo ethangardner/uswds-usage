@@ -1,0 +1,20 @@
+/*
+----------------------------------------
+USWDS with settings overrides
+----------------------------------------
+Settings-first theming, per the project's documented customization
+approach (github.com/uswds/uswds/discussions/6765#discussioncomment-17674633):
+"modify Sass variables" before reaching for utility classes or custom CSS.
+
+Public Sans is a built-in USWDS typeface token (fonts already bundled,
+no custom @font-face needed) -- switching the heading role to it gives a
+single, consistent voice across a data-dense report instead of the default
+sans-body/serif-heading pairing, without touching any usa-* class.
+----------------------------------------
+*/
+
+@use "uswds-core" with (
+  $theme-font-type-sans: "public-sans",
+  $theme-font-role-heading: "sans",
+  $theme-show-notifications: false,
+);

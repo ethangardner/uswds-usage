@@ -1,0 +1,13 @@
+/*
+----------------------------------------
+USWDS THEME CUSTOM STYLES
+----------------------------------------
+Project-specific Sass, per the settings-first / higher-specificity
+customization approach documented in
+github.com/uswds/uswds/discussions/6765#discussioncomment-17674633.
+Nothing needed here yet -- the theme override in _uswds-theme.scss covers
+everything this report currently needs.
+----------------------------------------
+*/
+
+@use "uswds-core" as *;

@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io"
+	"net/http"
 	"strconv"
 	"strings"
 )
@@ -15,22 +16,23 @@ type AnalyticsRecord struct {
 	Visits    int
 }
 
-// fetchAnalyticsRecords returns a map of lowercased hostname -> traffic totals.
-func fetchAnalyticsRecords() (map[string]AnalyticsRecord, error) {
-	r, closer, err := fetchCSVReader(analyticsURL)
+// fetchAnalyticsRecords returns a map of lowercased hostname -> traffic
+// totals, along with the response headers (Last-Modified/ETag provenance).
+func fetchAnalyticsRecords() (map[string]AnalyticsRecord, http.Header, error) {
+	r, closer, respHeader, err := fetchCSVReader(analyticsURL)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	defer closer.Close()
 
 	header, err := r.Read()
 	if err != nil {
-		return nil, fmt.Errorf("reading analytics header: %w", err)
+		return nil, nil, fmt.Errorf("reading analytics header: %w", err)
 	}
 
 	idx, err := columnIndex(header, "hostname", "pageviews", "visits")
 	if err != nil {
-		return nil, fmt.Errorf("analytics file: %w", err)
+		return nil, nil, fmt.Errorf("analytics file: %w", err)
 	}
 
 	records := make(map[string]AnalyticsRecord)
@@ -40,7 +42,7 @@ func fetchAnalyticsRecords() (map[string]AnalyticsRecord, error) {
 			break
 		}
 		if err != nil {
-			return nil, fmt.Errorf("reading analytics row: %w", err)
+			return nil, nil, fmt.Errorf("reading analytics row: %w", err)
 		}
 
 		hostname := strings.ToLower(strings.TrimSpace(row[idx["hostname"]]))
@@ -50,5 +52,5 @@ func fetchAnalyticsRecords() (map[string]AnalyticsRecord, error) {
 		records[hostname] = AnalyticsRecord{Pageviews: pageviews, Visits: visits}
 	}
 
-	return records, nil
+	return records, respHeader, nil
 }

@@ -18,6 +18,10 @@ type ReportRow struct {
 	Pageviews            int
 	Visits               int
 	HasTrafficData       bool
+	// ScanDate is the most recent GSA scan_date across this domain's raw
+	// site-scanning rows -- the real as-of date of the detection, distinct
+	// from whenever this tool happens to run.
+	ScanDate string
 }
 
 // UsesClasses reports whether the site was detected using class-based USWDS markup.
@@ -47,6 +51,7 @@ func buildReport(siteScans []SiteScanRecord, analytics map[string]AnalyticsRecor
 		usesUSWDS bool
 		agency    string
 		version   string
+		scanDate  string
 		classes   map[string]bool
 		elements  map[string]bool
 	}
@@ -68,6 +73,9 @@ func buildReport(siteScans []SiteScanRecord, analytics map[string]AnalyticsRecor
 		}
 		if a.version == "" {
 			a.version = s.UswdsSemanticVersion
+		}
+		if s.ScanDate > a.scanDate {
+			a.scanDate = s.ScanDate
 		}
 		for _, c := range s.UswdsClasses {
 			a.classes[c] = true
@@ -102,6 +110,7 @@ func buildReport(siteScans []SiteScanRecord, analytics map[string]AnalyticsRecor
 			UswdsSemanticVersion: a.version,
 			Classes:              classes,
 			Elements:             elements,
+			ScanDate:             a.scanDate,
 		}
 		if traffic, ok := analytics[domain]; ok {
 			row.Pageviews = traffic.Pageviews
@@ -116,6 +125,52 @@ func buildReport(siteScans []SiteScanRecord, analytics map[string]AnalyticsRecor
 	})
 
 	return rows
+}
+
+// TopNCoverage summarizes, for a fixed N, how much of the highest-traffic
+// .gov domain cohort (by 30-day pageviews) is USWDS-adopting. Unlike the main
+// report -- which only lists adopting domains -- this looks at the full
+// analytics.usa.gov domain universe, so it can compute a true coverage ratio
+// rather than just a count of adopters.
+type TopNCoverage struct {
+	N        int // domains actually considered, <= the requested N
+	Adopting int
+}
+
+// computeTopNCoverage ranks .gov domains from analytics by 30-day pageviews,
+// takes the top n, and reports how many of those are USWDS-adopting per
+// siteScans.
+func computeTopNCoverage(siteScans []SiteScanRecord, analytics map[string]AnalyticsRecord, n int) TopNCoverage {
+	adopting := make(map[string]bool)
+	for _, s := range siteScans {
+		if s.UsesUSWDS() {
+			adopting[s.Domain] = true
+		}
+	}
+
+	type domainTraffic struct {
+		domain    string
+		pageviews int
+	}
+	var govDomains []domainTraffic
+	for domain, rec := range analytics {
+		if strings.HasSuffix(domain, ".gov") {
+			govDomains = append(govDomains, domainTraffic{domain, rec.Pageviews})
+		}
+	}
+	sort.Slice(govDomains, func(i, j int) bool { return govDomains[i].pageviews > govDomains[j].pageviews })
+
+	if n > len(govDomains) {
+		n = len(govDomains)
+	}
+
+	cov := TopNCoverage{N: n}
+	for _, d := range govDomains[:n] {
+		if adopting[d.domain] {
+			cov.Adopting++
+		}
+	}
+	return cov
 }
 
 // AgencyStats summarizes how many agencies and subagencies (bureaus) have at

@@ -19,6 +19,9 @@ type SiteScanRecord struct {
 	UswdsSemanticVersion string
 	UswdsClasses         []string
 	UswdsElements        []string
+	// ScanDate is GSA's own as-of date for this row (its scan_date column),
+	// distinct from whenever this tool happens to run.
+	ScanDate string
 }
 
 // UsesUSWDS reports whether the site-scanning data detected USWDS on this
@@ -28,21 +31,21 @@ func (s SiteScanRecord) UsesUSWDS() bool {
 	return s.UswdsCount > 0 || len(s.UswdsElements) > 0
 }
 
-func fetchSiteScanRecords() ([]SiteScanRecord, error) {
-	r, closer, err := fetchCSVReader(siteScanningURL)
+func fetchSiteScanRecords() ([]SiteScanRecord, FetchMeta, error) {
+	r, closer, respHeader, err := fetchCSVReader(siteScanningURL)
 	if err != nil {
-		return nil, err
+		return nil, FetchMeta{}, err
 	}
 	defer closer.Close()
 
 	header, err := r.Read()
 	if err != nil {
-		return nil, fmt.Errorf("reading site-scanning header: %w", err)
+		return nil, FetchMeta{}, fmt.Errorf("reading site-scanning header: %w", err)
 	}
 
-	idx, err := columnIndex(header, "domain", "agency", "bureau", "uswds_count", "uswds_semantic_version", "uswds_usa_class_list", "uswds_usa_elements_list")
+	idx, err := columnIndex(header, "domain", "agency", "bureau", "uswds_count", "uswds_semantic_version", "uswds_usa_class_list", "uswds_usa_elements_list", "scan_date")
 	if err != nil {
-		return nil, fmt.Errorf("site-scanning file: %w", err)
+		return nil, FetchMeta{}, fmt.Errorf("site-scanning file: %w", err)
 	}
 
 	var records []SiteScanRecord
@@ -52,7 +55,7 @@ func fetchSiteScanRecords() ([]SiteScanRecord, error) {
 			break
 		}
 		if err != nil {
-			return nil, fmt.Errorf("reading site-scanning row: %w", err)
+			return nil, FetchMeta{}, fmt.Errorf("reading site-scanning row: %w", err)
 		}
 
 		count, _ := strconv.Atoi(strings.TrimSpace(row[idx["uswds_count"]]))
@@ -65,10 +68,11 @@ func fetchSiteScanRecords() ([]SiteScanRecord, error) {
 			UswdsSemanticVersion: row[idx["uswds_semantic_version"]],
 			UswdsClasses:         parseClassList(row[idx["uswds_usa_class_list"]]),
 			UswdsElements:        parseClassList(row[idx["uswds_usa_elements_list"]]),
+			ScanDate:             strings.TrimSpace(row[idx["scan_date"]]),
 		})
 	}
 
-	return records, nil
+	return records, FetchMeta{Header: respHeader, Columns: header}, nil
 }
 
 // parseClassList parses a JSON-array-encoded list column (uswds_usa_class_list

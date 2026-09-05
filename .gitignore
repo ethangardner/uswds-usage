@@ -1,1 +1,8 @@
-*.csv
+/uswds-usage
+/uswds-traffic-report.csv
+/report.csv
+/node_modules
+
+# snapshots/ is intentionally tracked -- it is the historical archive.
+# docs/assets/uswds/ (compiled by `npm run build`) is also intentionally
+# tracked -- GitHub Pages serves docs/ as-is, with no build step of its own.
