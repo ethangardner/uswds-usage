@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"encoding/csv"
@@ -21,7 +21,7 @@ type SnapshotDay struct {
 	Meta SnapshotMeta
 }
 
-// loadArchive reads every snapshots/<date>/uswds-traffic-report.csv (and its
+// loadArchive reads every data/snapshots/<date>/uswds-traffic-report.csv (and its
 // sibling meta.json, when present) under archiveDir, returning one
 // SnapshotDay per dated subdirectory, sorted ascending by date.
 func loadArchive(archiveDir string) ([]SnapshotDay, error) {
@@ -270,7 +270,7 @@ func writeTrendCSV(path string, points []TrendPoint) error {
 
 func runTrendCmd(args []string) error {
 	fs := flag.NewFlagSet("trend", flag.ExitOnError)
-	archiveDir := fs.String("archive-dir", "snapshots", "directory the historical archive lives in")
+	archiveDir := fs.String("archive-dir", "data/snapshots", "directory the historical archive lives in")
 	output := fs.String("output", "", "optional path to write computed trend metrics as CSV")
 	latestMajor := fs.String("latest-major", "3", "current/supported USWDS major version, for the version-currency SLI")
 	if err := fs.Parse(args); err != nil {

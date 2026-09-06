@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"bytes"
@@ -17,7 +17,7 @@ const gsaHistoryRepoURL = "https://github.com/GSA/site-scanning-analysis.git"
 
 func runRefreshGSAHistoryCmd(args []string) error {
 	fs := flag.NewFlagSet("refresh-gsa-history", flag.ExitOnError)
-	historyFile := fs.String("history-file", "external-data/gsa-uswds-report-history.csv", "path to the GSA history CSV to append new rows to")
+	historyFile := fs.String("history-file", "data/external/gsa-uswds-report-history.csv", "path to the GSA history CSV to append new rows to")
 	repoURL := fs.String("repo-url", gsaHistoryRepoURL, "URL (or local path) of the site-scanning-analysis git repo to read from")
 	if err := fs.Parse(args); err != nil {
 		return err

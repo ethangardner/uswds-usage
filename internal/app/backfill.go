@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"encoding/csv"
@@ -23,7 +23,7 @@ func runBackfillCmd(args []string) error {
 	fs := flag.NewFlagSet("backfill", flag.ExitOnError)
 	date := fs.String("date", "", "snapshot date this export represents, YYYY-MM-DD (required; never inferred from the file's mtime)")
 	file := fs.String("file", "", "path to a prior report CSV export to ingest (required)")
-	archiveDir := fs.String("archive-dir", "snapshots", "directory the historical archive lives in")
+	archiveDir := fs.String("archive-dir", "data/snapshots", "directory the historical archive lives in")
 	force := fs.Bool("force", false, "overwrite an existing snapshot for -date")
 	if err := fs.Parse(args); err != nil {
 		return err

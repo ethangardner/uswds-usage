@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"encoding/csv"
@@ -7,7 +7,7 @@ import (
 	"os"
 )
 
-// GSAHistoryRow is one row of external-data/gsa-uswds-report-history.csv --
+// GSAHistoryRow is one row of data/external/gsa-uswds-report-history.csv --
 // GSA's site-scanning-analysis cohort-level report, flattened into long
 // format across its full commit history. Every field is kept as a raw
 // string, exactly as Python's csv.DictReader would hand it back; callers
@@ -61,7 +61,7 @@ var gsaFieldMap = []struct{ Src, Dst string }{
 	{"Agencies_usa_class", "agencies_usa_class"},
 }
 
-// readGSAHistoryCSV reads external-data/gsa-uswds-report-history.csv, our
+// readGSAHistoryCSV reads data/external/gsa-uswds-report-history.csv, our
 // own output file, so a strict header check (via columnIndex) is
 // appropriate here -- unlike the historical GSA blobs refresh-gsa-history
 // extracts from, which may be missing columns depending on vintage.

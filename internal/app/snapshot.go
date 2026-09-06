@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"encoding/csv"
@@ -86,8 +86,8 @@ func archiveSnapshotDir(archiveDir, date string) string {
 	return filepath.Join(archiveDir, date)
 }
 
-// writeSnapshot writes snapshots/<date>/uswds-traffic-report.csv and
-// snapshots/<date>/meta.json, overwriting any existing snapshot for that
+// writeSnapshot writes data/snapshots/<date>/uswds-traffic-report.csv and
+// data/snapshots/<date>/meta.json, overwriting any existing snapshot for that
 // date.
 func writeSnapshot(archiveDir, date string, rows []SnapshotCSVRow, meta SnapshotMeta) error {
 	dir := archiveSnapshotDir(archiveDir, date)

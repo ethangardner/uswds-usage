@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"encoding/csv"
@@ -96,11 +96,11 @@ const reportCSS = `
 
 func runBuildReportCmd(args []string) error {
 	fs := flag.NewFlagSet("build-report", flag.ExitOnError)
-	gsaHistoryPath := fs.String("gsa-history", "external-data/gsa-uswds-report-history.csv", "path to the GSA history CSV")
-	originsPath := fs.String("httparchive-origins", "external-data/httparchive-uswds-origins.csv", "path to the HTTP Archive origins CSV")
-	cwvPath := fs.String("httparchive-cwv", "external-data/httparchive-uswds-good-cwv.csv", "path to the HTTP Archive Core Web Vitals CSV")
-	a11yPath := fs.String("httparchive-a11y", "external-data/httparchive-uswds-accessibility.csv", "path to the HTTP Archive accessibility CSV")
-	snapshotsDir := fs.String("snapshots-dir", "snapshots", "directory the historical snapshot archive lives in")
+	gsaHistoryPath := fs.String("gsa-history", "data/external/gsa-uswds-report-history.csv", "path to the GSA history CSV")
+	originsPath := fs.String("httparchive-origins", "data/external/httparchive-uswds-origins.csv", "path to the HTTP Archive origins CSV")
+	cwvPath := fs.String("httparchive-cwv", "data/external/httparchive-uswds-good-cwv.csv", "path to the HTTP Archive Core Web Vitals CSV")
+	a11yPath := fs.String("httparchive-a11y", "data/external/httparchive-uswds-accessibility.csv", "path to the HTTP Archive accessibility CSV")
+	snapshotsDir := fs.String("snapshots-dir", "data/snapshots", "directory the historical snapshot archive lives in")
 	outPath := fs.String("out", "docs/index.html", "path to write the generated report to")
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -391,7 +391,7 @@ func latestSnapshotMeta(archiveDir string) (date string, meta SnapshotMeta, ok b
 	return latest, m, true, nil
 }
 
-// HARow is one row of an external-data/httparchive-*.csv file
+// HARow is one row of an data/external/httparchive-*.csv file
 // (DateTime,ALL,USWDS). USWDS is nil when the field is blank or absent,
 // i.e. before USWDS detection existed in that dataset.
 type HARow struct {

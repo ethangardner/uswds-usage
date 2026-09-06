@@ -1,8 +1,10 @@
-// Command uswds-usage downloads GSA's site-scanning data and analytics.usa.gov's
-// top-100000-domains traffic snapshot, and reports 30-day traffic for sites
-// that use USWDS. It can also archive dated snapshots of that report and
-// compute adoption-trend metrics from the accumulated history.
-package main
+// Package app implements the uswds-usage CLI: it downloads GSA's
+// site-scanning data and analytics.usa.gov's top-100000-domains traffic
+// snapshot, and reports 30-day traffic for sites that use USWDS. It can
+// also archive dated snapshots of that report, compute adoption-trend
+// metrics from the accumulated history, and generate the USWDS Adoption
+// Pulse report. The cmd/uswds-usage binary is a thin wrapper calling Run.
+package app
 
 import (
 	"flag"
@@ -12,7 +14,10 @@ import (
 	"time"
 )
 
-func main() {
+// Run parses os.Args[1:], dispatches to the requested subcommand, and exits
+// the process on error (2 for an unrecognized subcommand, 1 for any other
+// failure) -- exactly as main() did before this package existed.
+func Run() {
 	args := os.Args[1:]
 
 	var err error
@@ -61,7 +66,7 @@ func runReportCmd(args []string) error {
 	top := fs.Int("top", 20, "number of top sites (by pageviews) to print to the console")
 	topClasses := fs.Int("top-classes", 25, "number of most common USWDS classes to print to the console")
 	topElements := fs.Int("top-elements", 25, "number of most common USWDS custom elements to print to the console")
-	archiveDir := fs.String("archive-dir", "snapshots", "directory to write a dated historical snapshot to")
+	archiveDir := fs.String("archive-dir", "data/snapshots", "directory to write a dated historical snapshot to")
 	noArchive := fs.Bool("no-archive", false, "skip writing a dated snapshot to the historical archive")
 	snapshotDate := fs.String("snapshot-date", "", "override the archive snapshot date, YYYY-MM-DD (default: today, UTC)")
 	topNCoverage := fs.Int("top-n-coverage", 500, "size of the top-by-traffic .gov domain cohort used for the traffic-weighted coverage SLI")

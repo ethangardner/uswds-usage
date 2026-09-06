@@ -84,10 +84,10 @@ on demand via `workflow_dispatch`) and regenerates `docs/index.html` — a
 program-health report covering .gov adoption, version-currency, and a
 Core Web Vitals performance comparison against the web at large. Each run:
 
-1. `./uswds-usage report` — a fresh dated snapshot under `snapshots/`.
+1. `./uswds-usage report` — a fresh dated snapshot under `data/snapshots/`.
 2. `./uswds-usage refresh-gsa-history` — pulls any new commits from GSA's
    [site-scanning-analysis](https://github.com/GSA/site-scanning-analysis)
-   repo into `external-data/gsa-uswds-report-history.csv` (incremental —
+   repo into `data/external/gsa-uswds-report-history.csv` (incremental —
    only fetches dates newer than what's already there).
 3. `npm ci && npm run build` — compiles the USWDS theme (see below); a
    no-op in practice unless `theme/` or the USWDS version changed.
@@ -97,7 +97,7 @@ Core Web Vitals performance comparison against the web at large. Each run:
    to the repo.
 
 **What doesn't auto-refresh:** the two HTTP Archive datasets
-(`external-data/httparchive-uswds-origins.csv` and
+(`data/external/httparchive-uswds-origins.csv` and
 `httparchive-uswds-good-cwv.csv`). Those come from querying HTTP Archive's
 public dataset directly — replace those two files with fresh exports
 (same `DateTime,ALL,USWDS` shape) whenever you have new numbers, then either
@@ -122,17 +122,17 @@ from the latest `docs/index.html`.
 ## Running it
 
 ```bash
-go run . report
+go run ./cmd/uswds-usage report
 ```
 
-(bare `go run .` with no subcommand, or with only flags, is a shorthand for
+(bare `go run ./cmd/uswds-usage` with no subcommand, or with only flags, is a shorthand for
 `report` and keeps working the same way it always has.)
 
 This downloads both datasets, writes `uswds-traffic-report.csv` in the
 current directory, prints a summary to the console (overall totals, top
 sites by pageviews, agency/subagency counts, most common USWDS classes and
 elements in use), and archives a dated snapshot of the report under
-`snapshots/<YYYY-MM-DD>/` for historical/trend tracking (see below).
+`data/snapshots/<YYYY-MM-DD>/` for historical/trend tracking (see below).
 
 ### `report` flags
 
@@ -142,7 +142,7 @@ elements in use), and archives a dated snapshot of the report under
 | `-top`              | `20`                        | Number of top sites (by pageviews) to print to the console |
 | `-top-classes`      | `25`                        | Number of most common USWDS classes to print to the console |
 | `-top-elements`     | `25`                        | Number of most common USWDS custom elements to print to the console |
-| `-archive-dir`      | `snapshots`                 | Directory to write the dated historical snapshot to      |
+| `-archive-dir`      | `data/snapshots`            | Directory to write the dated historical snapshot to      |
 | `-no-archive`       | `false`                     | Skip writing to the historical archive                   |
 | `-snapshot-date`    | today, UTC                  | Override the archive snapshot date (`YYYY-MM-DD`)         |
 | `-top-n-coverage`   | `500`                       | Size of the top-by-traffic `.gov` cohort used for the traffic-weighted coverage SLI |
@@ -150,13 +150,13 @@ elements in use), and archives a dated snapshot of the report under
 Example:
 
 ```bash
-go run . report -output report.csv -top 100 -top-classes 100
+go run ./cmd/uswds-usage report -output report.csv -top 100 -top-classes 100
 ```
 
 You can also build a binary and run it directly:
 
 ```bash
-go build -o uswds-usage .
+go build -o uswds-usage ./cmd/uswds-usage
 ./uswds-usage
 ```
 
@@ -173,11 +173,11 @@ data get `0` for pageviews/visits.
 ## Historical archive and trend metrics
 
 Every `report` run (unless `-no-archive` is passed) also writes a dated
-snapshot under `snapshots/<YYYY-MM-DD>/`: the same report data plus
+snapshot under `data/snapshots/<YYYY-MM-DD>/`: the same report data plus
 `source_scan_date`/`report_run_at` timestamps (`uswds-traffic-report.csv`,
 9-column archive schema) and a `meta.json` with source provenance (upstream
 URLs, `Last-Modified`/`ETag`, GSA's full column list at fetch time, and the
-top-N traffic-weighted coverage SLI). `snapshots/` is tracked in git — it's
+top-N traffic-weighted coverage SLI). `data/snapshots/` is tracked in git — it's
 small, diffable, and is the historical record adoption-trend reporting is
 built from.
 
@@ -187,7 +187,7 @@ If you have older report CSV exports (from before this archive existed),
 fold them in:
 
 ```bash
-go run . backfill -date=2024-03-15 -file=/path/to/old-export.csv
+go run ./cmd/uswds-usage backfill -date=2024-03-15 -file=/path/to/old-export.csv
 ```
 
 `-date` is required and is never inferred from the file's mtime — supply the
@@ -200,7 +200,7 @@ overwrite an existing snapshot for that date.
 ### `trend` — computing adoption metrics over time
 
 ```bash
-go run . trend
+go run ./cmd/uswds-usage trend
 ```
 
 Reads every snapshot in the archive and prints, per date: adopting domain
@@ -210,7 +210,7 @@ class-only/element-only/both counts, and total pageviews, plus the change
 between the first and last snapshot. Pass `-output=trend.csv` to also write
 the computed metrics as CSV.
 
-## `external-data/gsa-uswds-report-history.csv`
+## `data/external/gsa-uswds-report-history.csv`
 
 GSA's own [site-scanning-analysis](https://github.com/GSA/site-scanning-analysis)
 repo commits an updated `reports/uswds.csv` roughly daily. That report is a
@@ -220,7 +220,7 @@ stage: scanned/live/filtered/non-redirecting), with counts of sites on
 v1.x/v2.x/v3.x, sites showing the USWDS banner, and sites using `usa-*`
 classes, each broken out by distinct-agency count too.
 
-`external-data/gsa-uswds-report-history.csv` is that report's full commit
+`data/external/gsa-uswds-report-history.csv` is that report's full commit
 history (2026-01-27 through 2026-09-04, ~208 daily snapshots) flattened into
 one long-format CSV (`report_date, commit, group, count, agencies,
 semantic_version, agencies_sv, v1_x, agencies_v1, v2_x, agencies_v2, v3_x,
@@ -242,7 +242,7 @@ detection (it's cohort-aggregate, not one-row-per-domain) — it's kept as a
 reference dataset for direct analysis (spreadsheet/pandas/etc.), not
 something `uswds-usage trend` reads today.
 
-## `external-data/httparchive-uswds-origins.csv`
+## `data/external/httparchive-uswds-origins.csv`
 
 Monthly counts of USWDS-detected origins against HTTP Archive's total crawl
 universe (`DateTime,ALL,USWDS`), 2020-01 through 2026-07 — an independent,
@@ -258,7 +258,7 @@ web-wide corroboration of the GSA-based numbers above (not limited to
   USWDS/ALL *share*, not the raw `USWDS` count, to compare across that
   boundary.
 
-## `external-data/httparchive-uswds-good-cwv.csv`
+## `data/external/httparchive-uswds-good-cwv.csv`
 
 Same shape (`DateTime,ALL,USWDS`), but the values are the monthly % of page
 loads rated "Good" on Core Web Vitals (HTTP Archive joined against the
@@ -270,7 +270,7 @@ average every year since tracking began, and the gap has widened each year:
 third Core Web Vital that month), not a data error; both recover over the
 following months and the USWDS-vs-web gap is unaffected.
 
-## `external-data/httparchive-uswds-accessibility.csv`
+## `data/external/httparchive-uswds-accessibility.csv`
 
 Same shape (`DateTime,ALL,USWDS`), monthly **median** Lighthouse
 accessibility score (0–100) — HTTP Archive publishes these as medians, not
@@ -285,17 +285,20 @@ something changed, since it's been this stable for 4.5 years.
 
 ## Source files
 
-| File               | Responsibility                                                                 |
-|--------------------|----------------------------------------------------------------------------------|
-| `main.go`          | Entry point; subcommand dispatch (`report`/`backfill`/`trend`) and the report flow |
-| `fetch.go`         | Shared HTTP + CSV streaming helper (`fetchCSVReader`) used by both data sources    |
-| `sitescanning.go`  | Downloads and parses the GSA site-scanning CSV into `SiteScanRecord`s              |
-| `analytics.go`     | Downloads and parses the analytics.usa.gov CSV into `AnalyticsRecord`s             |
-| `report.go`        | Dedupes/joins the two datasets into `ReportRow`s, computes stats, writes the CSV, and prints console summaries |
-| `snapshot.go`      | Historical archive schema and writer (`snapshots/<date>/uswds-traffic-report.csv` + `meta.json`) |
-| `backfill.go`      | `backfill` subcommand — ingests prior report exports into the archive             |
-| `trend.go`         | `trend` subcommand — loads the archive and computes adoption/health metrics       |
-| `gsahistory.go`    | Shared schema for `external-data/gsa-uswds-report-history.csv`                    |
-| `refreshgsahistory.go` | `refresh-gsa-history` subcommand — pulls new commits from GSA's site-scanning-analysis repo |
-| `buildreport.go`   | `build-report` subcommand — recomputes KPIs/charts and writes `docs/index.html`   |
-| `pyjson.go`        | Python-`json.dumps`-compatible encoder for `build-report`'s embedded chart data   |
+All CLI/report-generator code lives in one package, `internal/app`; `cmd/uswds-usage` is a thin wrapper that calls into it.
+
+| File                            | Responsibility                                                                 |
+|----------------------------------|----------------------------------------------------------------------------------|
+| `cmd/uswds-usage/main.go`        | Binary entrypoint; calls `app.Run()`                                             |
+| `internal/app/run.go`            | Subcommand dispatch (`report`/`backfill`/`trend`/`serve`/`build-report`/`refresh-gsa-history`) and the report flow |
+| `internal/app/fetch.go`          | Shared HTTP + CSV streaming helper (`fetchCSVReader`) used by both data sources    |
+| `internal/app/sitescanning.go`   | Downloads and parses the GSA site-scanning CSV into `SiteScanRecord`s              |
+| `internal/app/analytics.go`      | Downloads and parses the analytics.usa.gov CSV into `AnalyticsRecord`s             |
+| `internal/app/report.go`         | Dedupes/joins the two datasets into `ReportRow`s, computes stats, writes the CSV, and prints console summaries |
+| `internal/app/snapshot.go`       | Historical archive schema and writer (`data/snapshots/<date>/uswds-traffic-report.csv` + `meta.json`) |
+| `internal/app/backfill.go`       | `backfill` subcommand — ingests prior report exports into the archive             |
+| `internal/app/trend.go`          | `trend` subcommand — loads the archive and computes adoption/health metrics       |
+| `internal/app/gsahistory.go`     | Shared schema for `data/external/gsa-uswds-report-history.csv`                    |
+| `internal/app/refreshgsahistory.go` | `refresh-gsa-history` subcommand — pulls new commits from GSA's site-scanning-analysis repo |
+| `internal/app/buildreport.go`    | `build-report` subcommand — recomputes KPIs/charts and writes `docs/index.html`   |
+| `internal/app/pyjson.go`         | Python-`json.dumps`-compatible encoder for `build-report`'s embedded chart data   |
