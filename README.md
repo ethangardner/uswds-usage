@@ -85,7 +85,7 @@ program-health report covering .gov adoption, version-currency, and a
 Core Web Vitals performance comparison against the web at large. Each run:
 
 1. `./uswds-usage report` — a fresh dated snapshot under `data/snapshots/`.
-2. `./uswds-usage refresh-gsa-history` — pulls any new commits from GSA's
+2. `./uswds-usage refresh-history` — pulls any new commits from GSA's
    [site-scanning-analysis](https://github.com/GSA/site-scanning-analysis)
    repo into `data/external/gsa-uswds-report-history.csv` (incremental —
    only fetches dates newer than what's already there).
@@ -290,7 +290,7 @@ All CLI/report-generator code lives in one package, `internal/app`; `cmd/uswds-u
 | File                            | Responsibility                                                                 |
 |----------------------------------|----------------------------------------------------------------------------------|
 | `cmd/uswds-usage/main.go`        | Binary entrypoint; calls `app.Run()`                                             |
-| `internal/app/run.go`            | Subcommand dispatch (`report`/`backfill`/`trend`/`serve`/`build-report`/`refresh-gsa-history`) and the report flow |
+| `internal/app/run.go`            | Subcommand dispatch (`report`/`backfill`/`trend`/`serve`/`build-report`/`refresh-history`) and the report flow |
 | `internal/app/fetch.go`          | Shared HTTP + CSV streaming helper (`fetchCSVReader`) used by both data sources    |
 | `internal/app/sitescanning.go`   | Downloads and parses the GSA site-scanning CSV into `SiteScanRecord`s              |
 | `internal/app/analytics.go`      | Downloads and parses the analytics.usa.gov CSV into `AnalyticsRecord`s             |
@@ -299,6 +299,6 @@ All CLI/report-generator code lives in one package, `internal/app`; `cmd/uswds-u
 | `internal/app/backfill.go`       | `backfill` subcommand — ingests prior report exports into the archive             |
 | `internal/app/trend.go`          | `trend` subcommand — loads the archive and computes adoption/health metrics       |
 | `internal/app/gsahistory.go`     | Shared schema for `data/external/gsa-uswds-report-history.csv`                    |
-| `internal/app/refreshgsahistory.go` | `refresh-gsa-history` subcommand — pulls new commits from GSA's site-scanning-analysis repo |
+| `internal/app/refreshhistory.go` | `refresh-history` subcommand — pulls new commits from GSA's site-scanning-analysis repo |
 | `internal/app/buildreport.go`    | `build-report` subcommand — recomputes KPIs/charts and writes `docs/index.html`   |
 | `internal/app/jsonenc.go`        | Python-`json.dumps`-compatible encoder for `build-report`'s embedded chart data   |

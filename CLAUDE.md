@@ -34,7 +34,7 @@ There's no broad test suite yet, just `jsonenc_test.go`'s regression guard for t
 
 ```bash
 ./uswds-usage report                    # writes data/snapshots/<today>/
-./uswds-usage refresh-gsa-history       # incremental; appends new GSA commits only
+./uswds-usage refresh-history           # incremental; appends new GSA commits only
 npm install && npm run build            # compiles theme/ -> docs/assets/uswds/
 ./uswds-usage build-report              # writes docs/index.html
 ```
@@ -49,7 +49,7 @@ This exact sequence is what the monthly GitHub Actions workflow runs and commits
 
 ### CLI subcommand dispatch
 
-`run.go` does its own arg-based dispatch — no cobra/cli framework. Bare `uswds-usage` or `uswds-usage -flag` is a backward-compatible alias for `report` (this predates the other subcommands and must keep working unmodified). Each subcommand (`report` in `run.go`, `backfill.go`, `trend.go`, `serve.go`, `refreshgsahistory.go`, `buildreport.go`) owns its own `flag.NewFlagSet`.
+`run.go` does its own arg-based dispatch — no cobra/cli framework. Bare `uswds-usage` or `uswds-usage -flag` is a backward-compatible alias for `report` (this predates the other subcommands and must keep working unmodified). Each subcommand (`report` in `run.go`, `backfill.go`, `trend.go`, `serve.go`, `refreshhistory.go`, `buildreport.go`) owns its own `flag.NewFlagSet`.
 
 ### CLI data flow
 
@@ -59,7 +59,7 @@ This exact sequence is what the monthly GitHub Actions workflow runs and commits
 
 `data/external/` holds three checked-in reference datasets, each with real data-quality caveats that the code — not just the docs — accounts for:
 
-- `gsa-uswds-report-history.csv` — GSA's own daily cohort-level adoption report, extracted from that repo's commit history via `refreshgsahistory.go`. Has a ~10x methodology-break jump on 2026-03-25 (a GSA bug fix) and one broken scan day (2026-06-26).
+- `gsa-uswds-report-history.csv` — GSA's own daily cohort-level adoption report, extracted from that repo's commit history via `refreshhistory.go`. Has a ~10x methodology-break jump on 2026-03-25 (a GSA bug fix) and one broken scan day (2026-06-26).
 - `httparchive-uswds-origins.csv` / `httparchive-uswds-good-cwv.csv` — independent, web-wide HTTP Archive data (not limited to `.gov`). Nothing auto-refreshes these; they're replaced by hand when new query results exist.
 
 `buildreport.go` is the single source of truth for how those caveats get applied: `gsaCleanStart`, `gsaExcludedDates`, and `httparchiveCleanStart` near the top of the file are the exclusion boundaries used throughout. It also re-scans the GSA data on every run for *new* anomalies of the same shape (a cohort's day-over-day count more than doubling or halving) and prints a warning rather than silently trusting a bad month — check that output before trusting a regenerated report. `jsonenc.go` holds the hand-rolled encoder for the embedded chart-data JSON, matching Python `json.dumps`'s separators, `ensure_ascii` escaping, and float formatting exactly (a holdover requirement from when this was `scripts/build_report.py`, kept so the report's output format didn't change when the generator was ported to Go).

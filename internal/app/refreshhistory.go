@@ -15,21 +15,21 @@ import (
 
 const gsaHistoryRepoURL = "https://github.com/GSA/site-scanning-analysis.git"
 
-func runRefreshGSAHistoryCmd(args []string) error {
-	fs := flag.NewFlagSet("refresh-gsa-history", flag.ExitOnError)
+func runRefreshHistoryCmd(args []string) error {
+	fs := flag.NewFlagSet("refresh-history", flag.ExitOnError)
 	historyFile := fs.String("history-file", "data/external/gsa-uswds-report-history.csv", "path to the GSA history CSV to append new rows to")
 	repoURL := fs.String("repo-url", gsaHistoryRepoURL, "URL (or local path) of the site-scanning-analysis git repo to read from")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
 
-	return refreshGSAHistory(*historyFile, *repoURL)
+	return refreshHistory(*historyFile, *repoURL)
 }
 
-func refreshGSAHistory(historyFile, repoURL string) error {
+func refreshHistory(historyFile, repoURL string) error {
 	since, err := lastExtractedDate(historyFile)
 	if err != nil {
-		return fmt.Errorf("refresh-gsa-history: %w", err)
+		return fmt.Errorf("refresh-history: %w", err)
 	}
 	if since == "" {
 		fmt.Fprintln(os.Stderr, "last extracted date: (none -- full history)")
@@ -39,17 +39,17 @@ func refreshGSAHistory(historyFile, repoURL string) error {
 
 	cloneDir, err := os.MkdirTemp("", "site-scanning-analysis")
 	if err != nil {
-		return fmt.Errorf("refresh-gsa-history: %w", err)
+		return fmt.Errorf("refresh-history: %w", err)
 	}
 	defer os.RemoveAll(cloneDir)
 
 	if _, err := runGit("", "clone", "--filter=blob:none", "--no-checkout", repoURL, cloneDir); err != nil {
-		return fmt.Errorf("refresh-gsa-history: %w", err)
+		return fmt.Errorf("refresh-history: %w", err)
 	}
 
 	logOutput, err := runGit(cloneDir, "log", "--follow", "--format=%H|%ad", "--date=format:%Y-%m-%d", "origin/main", "--", "reports/uswds.csv")
 	if err != nil {
-		return fmt.Errorf("refresh-gsa-history: %w", err)
+		return fmt.Errorf("refresh-history: %w", err)
 	}
 
 	var commits [][2]string // {hash, date}, newest first

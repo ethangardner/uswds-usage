@@ -36,10 +36,10 @@ func Run() {
 		err = runServeCmd(args[1:])
 	case args[0] == "build-report":
 		err = runBuildReportCmd(args[1:])
-	case args[0] == "refresh-gsa-history":
-		err = runRefreshGSAHistoryCmd(args[1:])
+	case args[0] == "refresh-history":
+		err = runRefreshHistoryCmd(args[1:])
 	default:
-		fmt.Fprintf(os.Stderr, "unknown subcommand %q (expected report|backfill|trend|serve|build-report|refresh-gsa-history)\n", args[0])
+		fmt.Fprintf(os.Stderr, "unknown subcommand %q (expected report|backfill|trend|serve|build-report|refresh-history)\n", args[0])
 		os.Exit(2)
 	}
 

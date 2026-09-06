@@ -63,7 +63,7 @@ var gsaFieldMap = []struct{ Src, Dst string }{
 
 // readGSAHistoryCSV reads data/external/gsa-uswds-report-history.csv, our
 // own output file, so a strict header check (via columnIndex) is
-// appropriate here -- unlike the historical GSA blobs refresh-gsa-history
+// appropriate here -- unlike the historical GSA blobs refresh-history
 // extracts from, which may be missing columns depending on vintage.
 func readGSAHistoryCSV(path string) ([]GSAHistoryRow, error) {
 	f, err := os.Open(path)

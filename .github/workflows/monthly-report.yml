@@ -30,7 +30,7 @@ jobs:
         run: ./uswds-usage report
 
       - name: Refresh GSA site-scanning-analysis history
-        run: ./uswds-usage refresh-gsa-history
+        run: ./uswds-usage refresh-history
 
       - name: Build the USWDS theme (CSS + fonts/icons/js)
         run: npm ci && npm run build
