@@ -16,7 +16,6 @@ report plus a console summary:
 ## Requirements
 
 - Go 1.26.3+ (see `go.mod`)
-- Python 3 (for the `scripts/` reporting pipeline below)
 - Node.js + npm (for the USWDS theme build below)
 - Internet access (the tool fetches live data on every run; nothing is
   bundled or cached)
@@ -38,7 +37,7 @@ stock USWDS — following the settings-first approach from
 [uswds/uswds#6765](https://github.com/uswds/uswds/discussions/6765#discussioncomment-17674633)
 ("modify Sass variables" before utility classes or custom CSS), it switches
 the heading font role to the built-in `public-sans` typeface token so the
-whole report reads in one voice. `scripts/build_report.py` (below) then
+whole report reads in one voice. `./uswds-usage build-report` (below) then
 generates `docs/index.html` against that compiled CSS; run `npm run build`
 again any time `theme/` changes or USWDS is upgraded in `package.json`.
 
@@ -69,7 +68,7 @@ Net effect: the compiled CSS goes from ~570KB (full `uswds` bundle) to
 ~240KB, and the asset directory from ~16MB (full icon/font sets vendored) to
 under 1MB.
 
-**If you add a new component or utility class to `scripts/build_report.py`**,
+**If you add a new component or utility class to `buildreport.go`**,
 it may silently not exist in the compiled output — no error, the class just
 won't match anything. Re-run this to see the real class inventory, and
 extend `theme/styles.scss` / `$output-these-utilities` accordingly:
@@ -86,13 +85,13 @@ program-health report covering .gov adoption, version-currency, and a
 Core Web Vitals performance comparison against the web at large. Each run:
 
 1. `./uswds-usage report` — a fresh dated snapshot under `snapshots/`.
-2. `scripts/refresh_gsa_history.py` — pulls any new commits from GSA's
+2. `./uswds-usage refresh-gsa-history` — pulls any new commits from GSA's
    [site-scanning-analysis](https://github.com/GSA/site-scanning-analysis)
    repo into `external-data/gsa-uswds-report-history.csv` (incremental —
    only fetches dates newer than what's already there).
 3. `npm ci && npm run build` — compiles the USWDS theme (see below); a
    no-op in practice unless `theme/` or the USWDS version changed.
-4. `scripts/build_report.py` — recomputes every KPI and chart from the
+4. `./uswds-usage build-report` — recomputes every KPI and chart from the
    checked-in data and writes `docs/index.html`.
 5. Commits the updated snapshot, history file, theme build, and report back
    to the repo.
@@ -102,8 +101,8 @@ Core Web Vitals performance comparison against the web at large. Each run:
 `httparchive-uswds-good-cwv.csv`). Those come from querying HTTP Archive's
 public dataset directly — replace those two files with fresh exports
 (same `DateTime,ALL,USWDS` shape) whenever you have new numbers, then either
-re-run `python3 scripts/build_report.py` locally or just let the next
-scheduled run pick them up. `build_report.py` re-checks the GSA data for new
+re-run `./uswds-usage build-report` locally or just let the next
+scheduled run pick them up. `build-report` re-checks the GSA data for new
 methodology-break-shaped anomalies (a cohort's day-over-day count more than
 doubling or halving) on every run and prints a warning rather than silently
 trusting a bad month — check the Actions log if a run's numbers look off.
@@ -296,3 +295,7 @@ something changed, since it's been this stable for 4.5 years.
 | `snapshot.go`      | Historical archive schema and writer (`snapshots/<date>/uswds-traffic-report.csv` + `meta.json`) |
 | `backfill.go`      | `backfill` subcommand — ingests prior report exports into the archive             |
 | `trend.go`         | `trend` subcommand — loads the archive and computes adoption/health metrics       |
+| `gsahistory.go`    | Shared schema for `external-data/gsa-uswds-report-history.csv`                    |
+| `refreshgsahistory.go` | `refresh-gsa-history` subcommand — pulls new commits from GSA's site-scanning-analysis repo |
+| `buildreport.go`   | `build-report` subcommand — recomputes KPIs/charts and writes `docs/index.html`   |
+| `pyjson.go`        | Python-`json.dumps`-compatible encoder for `build-report`'s embedded chart data   |

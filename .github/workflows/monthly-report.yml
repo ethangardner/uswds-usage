@@ -30,13 +30,13 @@ jobs:
         run: ./uswds-usage report
 
       - name: Refresh GSA site-scanning-analysis history
-        run: python3 scripts/refresh_gsa_history.py
+        run: ./uswds-usage refresh-gsa-history
 
       - name: Build the USWDS theme (CSS + fonts/icons/js)
         run: npm ci && npm run build
 
       - name: Regenerate docs/index.html
-        run: python3 scripts/build_report.py
+        run: ./uswds-usage build-report
 
       - name: Commit updated data and report
         run: |
