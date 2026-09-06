@@ -545,12 +545,12 @@ type lineChart struct {
 }
 
 type shareByYearChart struct {
-	Categories  []string  `json:"categories"`
-	Values      []pyFloat `json:"values"`
-	Colors      []string  `json:"colors"`
-	YLabel      string    `json:"yLabel"`
-	ValueFormat string    `json:"valueFormat"`
-	AriaLabel   string    `json:"ariaLabel"`
+	Categories  []string    `json:"categories"`
+	Values      []jsonFloat `json:"values"`
+	Colors      []string    `json:"colors"`
+	YLabel      string      `json:"yLabel"`
+	ValueFormat string      `json:"valueFormat"`
+	AriaLabel   string      `json:"ariaLabel"`
 }
 
 type chartAnnotation struct {
@@ -790,7 +790,7 @@ func renderHTML(gsa GSASummary, snapDate string, snapMeta SnapshotMeta, snapOK b
 		},
 		ShareByYear: shareByYearChart{
 			Categories:  barCategories,
-			Values:      pyFloats(barValues),
+			Values:      jsonFloats(barValues),
 			Colors:      barColors,
 			YLabel:      "USWDS origins per 10,000 crawled",
 			ValueFormat: ".2f",
@@ -829,7 +829,7 @@ func renderHTML(gsa GSASummary, snapDate string, snapMeta SnapshotMeta, snapOK b
 			AriaLabel:   "Line chart comparing median Lighthouse accessibility scores for USWDS sites vs. the web median.",
 		},
 	}
-	chartDataJSON, err := dumpsPy(chartData)
+	chartDataJSON, err := encodeJSON(chartData)
 	if err != nil {
 		return "", fmt.Errorf("encoding chart data: %w", err)
 	}

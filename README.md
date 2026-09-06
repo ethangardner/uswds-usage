@@ -301,4 +301,4 @@ All CLI/report-generator code lives in one package, `internal/app`; `cmd/uswds-u
 | `internal/app/gsahistory.go`     | Shared schema for `data/external/gsa-uswds-report-history.csv`                    |
 | `internal/app/refreshgsahistory.go` | `refresh-gsa-history` subcommand — pulls new commits from GSA's site-scanning-analysis repo |
 | `internal/app/buildreport.go`    | `build-report` subcommand — recomputes KPIs/charts and writes `docs/index.html`   |
-| `internal/app/pyjson.go`         | Python-`json.dumps`-compatible encoder for `build-report`'s embedded chart data   |
+| `internal/app/jsonenc.go`        | Python-`json.dumps`-compatible encoder for `build-report`'s embedded chart data   |

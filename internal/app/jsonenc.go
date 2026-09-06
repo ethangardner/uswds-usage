@@ -11,18 +11,20 @@ import (
 	"unicode/utf8"
 )
 
-// dumpsPy marshals v the way Python's json.dumps(v) would: default
+// encodeJSON marshals v the way Python's json.dumps(v) would: default
 // separators (", " / ": "), ensure_ascii=True, no HTML escaping, and (since
 // v is expected to be a struct, not a map) keys in field-declaration order.
+// This is required for docs/index.html's embedded chart data to stay
+// byte-identical to what the old Python report generator produced.
 //
 // This leans on encoding/json for everything it already does correctly --
 // struct field ordering, and all the fiddly string escaping (quotes,
 // backslashes, control characters) -- and only patches the handful of
 // surface differences from Python's encoder on top: wider separators and
-// \uXXXX-escaping non-ASCII runes. Floats are handled by the pyFloat type's
-// MarshalJSON, since Python's float formatting (always keep a decimal
-// point, sign-and-zero-padded exponents) has no stdlib equivalent.
-func dumpsPy(v any) (string, error) {
+// \uXXXX-escaping non-ASCII runes. Floats are handled by the jsonFloat
+// type's MarshalJSON, since Python's float formatting (always keep a
+// decimal point, sign-and-zero-padded exponents) has no stdlib equivalent.
+func encodeJSON(v any) (string, error) {
 	var buf bytes.Buffer
 	enc := json.NewEncoder(&buf)
 	enc.SetEscapeHTML(false)
@@ -31,10 +33,10 @@ func dumpsPy(v any) (string, error) {
 	}
 	// Encoder.Encode always appends a trailing newline; json.dumps doesn't.
 	compact := bytes.TrimSuffix(buf.Bytes(), []byte("\n"))
-	return pythonizeJSON(compact), nil
+	return reformatJSON(compact), nil
 }
 
-// pythonizeJSON rewrites Go's compact JSON encoding into Python's default
+// reformatJSON rewrites Go's compact JSON encoding into Python's default
 // json.dumps surface form: a space after every structural "," and ":", and
 // ensure_ascii-style \uXXXX escaping for any rune outside printable ASCII
 // (Go's encoder leaves valid non-ASCII UTF-8 in string literals untouched,
@@ -42,7 +44,7 @@ func dumpsPy(v any) (string, error) {
 // renders as "Mar 2024: FID→INP" -- this is what makes that so here).
 // Quote/backslash/control-char escaping is already done by encoding/json;
 // this only ever copies or widens what's already valid JSON text.
-func pythonizeJSON(data []byte) string {
+func reformatJSON(data []byte) string {
 	var b strings.Builder
 	b.Grow(len(data) + len(data)/4)
 
@@ -73,7 +75,7 @@ func pythonizeJSON(data []byte) string {
 			i++
 		case c == '\\':
 			// Copy the escape sequence verbatim -- encoding/json already
-			// chose the correct form (\n, \", , ...).
+			// chose the correct form (\n, \", ...).
 			b.WriteByte(c)
 			i++
 			if i < len(data) {
@@ -111,28 +113,28 @@ func writeUnicodeEscape(b *strings.Builder, r rune) {
 	fmt.Fprintf(b, `\u%04x\u%04x`, r1, r2)
 }
 
-// pyFloat marshals like Python's repr(float): the shortest round-tripping
+// jsonFloat marshals like Python's repr(float): the shortest round-tripping
 // decimal (Go's own strconv.FormatFloat with -1 precision computes the same
 // digit sequence CPython's repr would), but reformatted with Python's
 // surface conventions -- a trailing ".0" kept on whole numbers, and a
 // sign-and-zero-padded (>=2 digit) exponent in scientific notation. Go's
 // default float encoding drops the trailing ".0" and doesn't zero-pad
 // exponents, which would otherwise diverge from Python's output.
-type pyFloat float64
+type jsonFloat float64
 
-func (f pyFloat) MarshalJSON() ([]byte, error) {
-	return []byte(formatPyFloat(float64(f))), nil
+func (f jsonFloat) MarshalJSON() ([]byte, error) {
+	return []byte(formatFloat(float64(f))), nil
 }
 
-func pyFloats(vals []float64) []pyFloat {
-	out := make([]pyFloat, len(vals))
+func jsonFloats(vals []float64) []jsonFloat {
+	out := make([]jsonFloat, len(vals))
 	for i, v := range vals {
-		out[i] = pyFloat(v)
+		out[i] = jsonFloat(v)
 	}
 	return out
 }
 
-func formatPyFloat(f float64) string {
+func formatFloat(f float64) string {
 	switch {
 	case math.IsNaN(f):
 		return "NaN"
@@ -148,9 +150,9 @@ func formatPyFloat(f float64) string {
 
 	var s string
 	if decpt < -3 || decpt > 16 {
-		s = formatPySci(digits, exp)
+		s = formatSci(digits, exp)
 	} else {
-		s = formatPyFixed(digits, decpt)
+		s = formatFixed(digits, decpt)
 	}
 	if neg {
 		s = "-" + s
@@ -169,7 +171,7 @@ func shortestDigits(af float64) (digits string, exp int) {
 	return strings.Replace(s[:i], ".", "", 1), exp
 }
 
-func formatPyFixed(digits string, decpt int) string {
+func formatFixed(digits string, decpt int) string {
 	switch {
 	case decpt <= 0:
 		return "0." + strings.Repeat("0", -decpt) + digits
@@ -180,7 +182,7 @@ func formatPyFixed(digits string, decpt int) string {
 	}
 }
 
-func formatPySci(digits string, exp int) string {
+func formatSci(digits string, exp int) string {
 	mantissa := digits[:1]
 	if len(digits) > 1 {
 		mantissa += "." + digits[1:]

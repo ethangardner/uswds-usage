@@ -28,7 +28,7 @@ go run ./cmd/uswds-usage serve                      # serves docs/ at http://loc
 go test ./...
 ```
 
-There's no broad test suite yet, just `pyjson_test.go`'s regression guard for the Python-`json.dumps`-compatible encoder `build-report` relies on.
+There's no broad test suite yet, just `jsonenc_test.go`'s regression guard for the Python-`json.dumps`-compatible encoder `build-report` relies on.
 
 ### Report pipeline (regenerates `docs/index.html`)
 
@@ -62,7 +62,7 @@ This exact sequence is what the monthly GitHub Actions workflow runs and commits
 - `gsa-uswds-report-history.csv` — GSA's own daily cohort-level adoption report, extracted from that repo's commit history via `refreshgsahistory.go`. Has a ~10x methodology-break jump on 2026-03-25 (a GSA bug fix) and one broken scan day (2026-06-26).
 - `httparchive-uswds-origins.csv` / `httparchive-uswds-good-cwv.csv` — independent, web-wide HTTP Archive data (not limited to `.gov`). Nothing auto-refreshes these; they're replaced by hand when new query results exist.
 
-`buildreport.go` is the single source of truth for how those caveats get applied: `gsaCleanStart`, `gsaExcludedDates`, and `httparchiveCleanStart` near the top of the file are the exclusion boundaries used throughout. It also re-scans the GSA data on every run for *new* anomalies of the same shape (a cohort's day-over-day count more than doubling or halving) and prints a warning rather than silently trusting a bad month — check that output before trusting a regenerated report. `pyjson.go` holds the hand-rolled encoder for the embedded chart-data JSON, matching Python `json.dumps`'s separators, `ensure_ascii` escaping, and float formatting exactly (a holdover requirement from when this was `scripts/build_report.py`, kept so the report's output format didn't change when the generator was ported to Go).
+`buildreport.go` is the single source of truth for how those caveats get applied: `gsaCleanStart`, `gsaExcludedDates`, and `httparchiveCleanStart` near the top of the file are the exclusion boundaries used throughout. It also re-scans the GSA data on every run for *new* anomalies of the same shape (a cohort's day-over-day count more than doubling or halving) and prints a warning rather than silently trusting a bad month — check that output before trusting a regenerated report. `jsonenc.go` holds the hand-rolled encoder for the embedded chart-data JSON, matching Python `json.dumps`'s separators, `ensure_ascii` escaping, and float formatting exactly (a holdover requirement from when this was `scripts/build_report.py`, kept so the report's output format didn't change when the generator was ported to Go).
 
 `docs/index.html` and `docs/assets/uswds/` are **generated output that's committed to git** — GitHub Pages serves `docs/` as static files with no build step of its own, so the compiled theme has to live in the repo. Don't hand-edit `docs/index.html`; change `buildreport.go` and regenerate. `theme/` is the Sass source for `docs/assets/uswds/css/uswds.css` (compiled by `npm run build`): it customizes stock USWDS by a single Sass setting (switches the heading font role to the built-in `public-sans` typeface token), following the settings-first customization approach documented in `README.md`.
 
