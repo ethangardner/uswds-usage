@@ -202,34 +202,34 @@ body.report-page { background: var(--report-color-page-surface); color: var(--re
 .report-page .text-success-dark { color: var(--report-color-text-success); }
 .report-page .text-error-dark { color: var(--report-color-text-error); }
 .report-page .border-base-lighter { border-color: var(--report-color-surface-border); }
-.report-chart-panel { background: var(--report-color-surface); border: 1px solid var(--report-color-surface-border); border-radius: 4px; padding: 1.5rem 1.5rem 1rem; }
+.report-chart-panel { background: var(--report-color-surface); border: 0.125rem solid var(--report-color-surface-border); border-radius: 0.5rem; padding: 1.5rem 1.5rem 1rem; }
 .report-chart-wrap { overflow-x: auto; }
-/* aspect-ratio matches the svg's own width/height below width 480px, the
-   svg's min-width keeps it 480 wide regardless of container, so the floor
+/* aspect-ratio matches the svg's own width/height below width 30rem, the
+   svg's min-width keeps it 30rem wide regardless of container, so the floor
    below keeps this box tall enough to match that too. */
-.report-chart { position: relative; aspect-ratio: 920 / 300; min-height: calc(480px * 300 / 920); }
-.report-chart svg { width: 100%; height: auto; display: block; min-width: 480px; }
-.report-axis-title { font-size: 12px; fill: var(--report-color-axis-title); font-weight: 600; }
+.report-chart { position: relative; aspect-ratio: 920 / 300; min-height: calc(30rem * 300 / 920); }
+.report-chart svg { width: 100%; height: auto; display: block; min-width: 30rem; }
+.report-axis-title { font-size: 0.75rem; fill: var(--report-color-axis-title); font-weight: 600; }
 .report-axis .domain { stroke: var(--report-color-axis-line); }
 .report-axis .tick line { stroke: var(--report-color-axis-line); }
-.report-axis .tick text { font-size: 11px; fill: var(--report-color-axis-text); }
+.report-axis .tick text { font-size: 0.6875rem; fill: var(--report-color-axis-text); }
 .report-grid .domain { display: none; }
 .report-grid .tick line { stroke: var(--report-color-grid-line); stroke-width: 1; shape-rendering: crispEdges; }
-.report-line { fill: none; stroke-width: 2px; }
-.report-marker { r: 4.5px; stroke: var(--report-color-surface); stroke-width: 2px; }
-.report-crosshair { stroke: var(--report-color-crosshair); stroke-width: 1px; stroke-dasharray: 3 3; pointer-events: none; }
+.report-line { fill: none; stroke-width: 0.125rem; }
+.report-marker { r: 0.28125rem; stroke: var(--report-color-surface); stroke-width: 0.125rem; }
+.report-crosshair { stroke: var(--report-color-crosshair); stroke-width: 0.0625rem; stroke-dasharray: 3 3; pointer-events: none; }
 .report-overlay { cursor: crosshair; }
-.report-annotation-line { stroke: var(--report-color-annotation); stroke-width: 1.5px; stroke-dasharray: 4 4; }
-.report-annotation-label { font-size: 10.5px; fill: var(--report-color-annotation); }
-.report-bar-label { font-size: 11px; fill: var(--report-color-bar-label); font-weight: 600; }
+.report-annotation-line { stroke: var(--report-color-annotation); stroke-width: 0.09375rem; stroke-dasharray: 4 4; }
+.report-annotation-label { font-size: 0.65625rem; fill: var(--report-color-annotation); }
+.report-bar-label { font-size: 0.6875rem; fill: var(--report-color-bar-label); font-weight: 600; }
 .report-bar.is-hovered { opacity: .85; }
-.report-tooltip { position: absolute; pointer-events: none; background: var(--report-color-tooltip-surface); color: var(--report-color-tooltip-text); padding: .5rem .75rem; border-radius: 4px; font-size: .8rem; white-space: nowrap; z-index: 10; }
+.report-tooltip { position: absolute; pointer-events: none; background: var(--report-color-tooltip-surface); color: var(--report-color-tooltip-text); padding: .5rem .75rem; border-radius: 0.25rem; font-size: .8rem; white-space: nowrap; z-index: 10; }
 .report-tooltip-title { font-weight: 700; margin-bottom: .25rem; }
 .report-tooltip-row { display: flex; align-items: center; gap: .4rem; }
-.report-tooltip-swatch { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.report-tooltip-swatch { width: 0.5rem; height: 0.5rem; border-radius: 50%; flex-shrink: 0; }
 .report-tooltip-value { margin-left: auto; padding-left: .75rem; font-variant-numeric: tabular-nums; }
-.report-legend { display: flex; flex-wrap: wrap; gap: 1.5rem; margin-top: .75rem; padding-top: .75rem; border-top: 1px solid var(--report-color-surface-border); font-size: .93rem; }
-.report-legend .report-swatch { display: inline-block; width: 14px; height: 3px; border-radius: 2px; margin-right: .4rem; vertical-align: middle; }
+.report-legend { display: flex; flex-wrap: wrap; gap: 1.5rem; margin-top: .75rem; padding-top: .75rem; border-top: 0.0625rem solid var(--report-color-surface-border); font-size: .93rem; }
+.report-legend .report-swatch { display: inline-block; width: 0.875rem; height: 0.1875rem; border-radius: 0.125rem; margin-right: .4rem; vertical-align: middle; }
 .report-kpi-value { font-size: 2rem; font-weight: 700; font-variant-numeric: tabular-nums; margin: 0; }
 `
 
