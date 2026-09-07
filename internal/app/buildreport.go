@@ -56,40 +56,179 @@ var inpTransitionDate = time.Date(2024, 3, 1, 0, 0, 0, 0, time.UTC)
 // Layout uses the USWDS grid (grid-container/grid-row/grid-col), and every
 // component below (card, alert, table) is real usa-* markup, not custom CSS.
 //
-// The only non-USWDS styling is reportCSS: a small, narrowly-scoped
-// stylesheet for the D3 trend charts (docs/assets/report.js), which USWDS
-// has no component for (see the data-visualizations guidance). Per the same
-// discussion's third approach ("add your own class with higher specificity
-// ... avoid modifying usa-* classes"), it only ever touches its own
-// `.report-*` classes.
+// The compiled USWDS theme (docs/assets/uswds/css/uswds.css) is light-only
+// -- USWDS ships no dark palette to switch to. Dark-mode overrides for its
+// components (body text/background, .usa-card__container, the handful of
+// text-*-dark/text-primary utility classes actually used on this page) are
+// layered on here the same way the D3 chart CSS always has been: per the
+// discussion's third approach (github.com/uswds/uswds/discussions/6765
+// #discussioncomment-17674633) of "add your own class with higher
+// specificity" rather than editing usa-* class definitions or their usage
+// sites. <body> carries one extra class, `report-page` (added once, here,
+// not threaded through every element), and every override below is a
+// `.report-page <usa-selector>` descendant selector: two classes' worth of
+// specificity beats the compiled theme's single-class rules outright, so
+// this holds regardless of <style> tag order, and no usa-* selector or
+// element's class list is ever touched.
+//
+// Colors are semantic custom properties (--report-color-*), each a
+// light-dark() pair sourced from USWDS's own palette tokens (see comments
+// per line) so both the charts and the overridden usa-* surfaces match
+// USWDS hues in dark mode. `color-scheme: light dark` is set on :root (see
+// modern-web-guidance's dark-mode guide) so the whole document -- not just
+// the chart panels -- participates. The `@media`/`@supports` block is the
+// light-dark() fallback for browsers that support color-scheme but not yet
+// light-dark() (Baseline since 2024-05-13). Every text-on-surface pairing
+// below was checked with the uswds-mcp contrast checker and confirmed
+// against a live rendered page (see PR description) to meet WCAG AA (4.5:1)
+// for text and 3:1 for the non-text axis/grid/border graphics that have a
+// light-mode equivalent already living below that same bar.
 const reportCSS = `
-.report-chart-panel { background: #fff; border: 1px solid #dfe1e2; border-radius: 4px; padding: 1.5rem 1.5rem 1rem; }
+:root {
+  color-scheme: light dark;
+  --report-color-page-surface-light: #fff;
+  --report-color-page-surface-dark: #1c1d1f; /* gray-cool-90 */
+  --report-color-page-surface: var(--report-color-page-surface-light);
+  --report-color-page-text-light: #1b1b1b;
+  --report-color-page-text-dark: #f0f0f0; /* gray-5 */
+  --report-color-page-text: var(--report-color-page-text-light);
+  --report-color-surface-light: #fff;
+  --report-color-surface-dark: #2d2e2f; /* gray-cool-80 */
+  --report-color-surface: var(--report-color-surface-light);
+  --report-color-surface-border-light: #dfe1e2; /* gray-cool-10 */
+  --report-color-surface-border-dark: #8d9297; /* gray-cool-40 */
+  --report-color-surface-border: var(--report-color-surface-border-light);
+  --report-color-text-muted-light: #565c65; /* gray-cool-60 (text-base-dark) */
+  --report-color-text-muted-dark: #c6cace; /* gray-cool-20 */
+  --report-color-text-muted: var(--report-color-text-muted-light);
+  --report-color-text-accent-light: #005ea2; /* blue-60v (text-primary) */
+  --report-color-text-accent-dark: #58b4ff; /* blue-30v */
+  --report-color-text-accent: var(--report-color-text-accent-light);
+  --report-color-text-success-light: #008817; /* green-cool-50v (text-success-dark) */
+  --report-color-text-success-dark: #21c834; /* green-cool-30v */
+  --report-color-text-success: var(--report-color-text-success-light);
+  --report-color-text-error-light: #b50909; /* red-60v (text-error-dark) */
+  --report-color-text-error-dark: #ff8d7b; /* red-30v */
+  --report-color-text-error: var(--report-color-text-error-light);
+  --report-color-axis-line-light: #a9aeb1; /* gray-cool-30 */
+  --report-color-axis-line-dark: #8d9297; /* gray-cool-40 */
+  --report-color-axis-line: var(--report-color-axis-line-light);
+  --report-color-axis-text-light: #565c65; /* gray-cool-60 */
+  --report-color-axis-text-dark: #c6cace; /* gray-cool-20 */
+  --report-color-axis-text: var(--report-color-axis-text-light);
+  --report-color-axis-title-light: #3d4551; /* gray-cool-70 */
+  --report-color-axis-title-dark: #dfe1e2; /* gray-cool-10 */
+  --report-color-axis-title: var(--report-color-axis-title-light);
+  --report-color-grid-line-light: #dfe1e2; /* gray-cool-10 */
+  --report-color-grid-line-dark: #3d4551; /* gray-cool-70 */
+  --report-color-grid-line: var(--report-color-grid-line-light);
+  --report-color-crosshair-light: #71767a; /* gray-cool-50 */
+  --report-color-crosshair-dark: #a9aeb1; /* gray-cool-30 */
+  --report-color-crosshair: var(--report-color-crosshair-light);
+  --report-color-annotation-light: #c05600; /* orange-50v (accent-warm-dark) */
+  --report-color-annotation-dark: #fa9441; /* orange-30v */
+  --report-color-annotation: var(--report-color-annotation-light);
+  --report-color-bar-label-light: #1b1b1b;
+  --report-color-bar-label-dark: #f0f0f0; /* gray-5 */
+  --report-color-bar-label: var(--report-color-bar-label-light);
+  --report-color-tooltip-surface-light: #1b1b1b;
+  --report-color-tooltip-surface-dark: #c6cace; /* gray-cool-20 */
+  --report-color-tooltip-surface: var(--report-color-tooltip-surface-light);
+  --report-color-tooltip-text-light: #fff;
+  --report-color-tooltip-text-dark: #1c1d1f; /* gray-cool-90 */
+  --report-color-tooltip-text: var(--report-color-tooltip-text-light);
+  --report-color-series-primary-light: #005ea2; /* blue-60v (theme primary) */
+  --report-color-series-primary-dark: #58b4ff; /* blue-30v */
+  --report-color-series-primary: var(--report-color-series-primary-light);
+  --report-color-series-secondary-light: #c05600; /* orange-50v (accent-warm-dark) */
+  --report-color-series-secondary-dark: #fa9441; /* orange-30v */
+  --report-color-series-secondary: var(--report-color-series-secondary-light);
+  --report-color-series-neutral-light: #a9aeb1; /* gray-cool-30 */
+  --report-color-series-neutral-dark: #c6cace; /* gray-cool-20 */
+  --report-color-series-neutral: var(--report-color-series-neutral-light);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --report-color-page-surface: var(--report-color-page-surface-dark);
+    --report-color-page-text: var(--report-color-page-text-dark);
+    --report-color-surface: var(--report-color-surface-dark);
+    --report-color-surface-border: var(--report-color-surface-border-dark);
+    --report-color-text-muted: var(--report-color-text-muted-dark);
+    --report-color-text-accent: var(--report-color-text-accent-dark);
+    --report-color-text-success: var(--report-color-text-success-dark);
+    --report-color-text-error: var(--report-color-text-error-dark);
+    --report-color-axis-line: var(--report-color-axis-line-dark);
+    --report-color-axis-text: var(--report-color-axis-text-dark);
+    --report-color-axis-title: var(--report-color-axis-title-dark);
+    --report-color-grid-line: var(--report-color-grid-line-dark);
+    --report-color-crosshair: var(--report-color-crosshair-dark);
+    --report-color-annotation: var(--report-color-annotation-dark);
+    --report-color-bar-label: var(--report-color-bar-label-dark);
+    --report-color-tooltip-surface: var(--report-color-tooltip-surface-dark);
+    --report-color-tooltip-text: var(--report-color-tooltip-text-dark);
+    --report-color-series-primary: var(--report-color-series-primary-dark);
+    --report-color-series-secondary: var(--report-color-series-secondary-dark);
+    --report-color-series-neutral: var(--report-color-series-neutral-dark);
+  }
+}
+@supports (color: light-dark(#fff, #000)) {
+  :root {
+    --report-color-page-surface: light-dark(var(--report-color-page-surface-light), var(--report-color-page-surface-dark));
+    --report-color-page-text: light-dark(var(--report-color-page-text-light), var(--report-color-page-text-dark));
+    --report-color-surface: light-dark(var(--report-color-surface-light), var(--report-color-surface-dark));
+    --report-color-surface-border: light-dark(var(--report-color-surface-border-light), var(--report-color-surface-border-dark));
+    --report-color-text-muted: light-dark(var(--report-color-text-muted-light), var(--report-color-text-muted-dark));
+    --report-color-text-accent: light-dark(var(--report-color-text-accent-light), var(--report-color-text-accent-dark));
+    --report-color-text-success: light-dark(var(--report-color-text-success-light), var(--report-color-text-success-dark));
+    --report-color-text-error: light-dark(var(--report-color-text-error-light), var(--report-color-text-error-dark));
+    --report-color-axis-line: light-dark(var(--report-color-axis-line-light), var(--report-color-axis-line-dark));
+    --report-color-axis-text: light-dark(var(--report-color-axis-text-light), var(--report-color-axis-text-dark));
+    --report-color-axis-title: light-dark(var(--report-color-axis-title-light), var(--report-color-axis-title-dark));
+    --report-color-grid-line: light-dark(var(--report-color-grid-line-light), var(--report-color-grid-line-dark));
+    --report-color-crosshair: light-dark(var(--report-color-crosshair-light), var(--report-color-crosshair-dark));
+    --report-color-annotation: light-dark(var(--report-color-annotation-light), var(--report-color-annotation-dark));
+    --report-color-bar-label: light-dark(var(--report-color-bar-label-light), var(--report-color-bar-label-dark));
+    --report-color-tooltip-surface: light-dark(var(--report-color-tooltip-surface-light), var(--report-color-tooltip-surface-dark));
+    --report-color-tooltip-text: light-dark(var(--report-color-tooltip-text-light), var(--report-color-tooltip-text-dark));
+    --report-color-series-primary: light-dark(var(--report-color-series-primary-light), var(--report-color-series-primary-dark));
+    --report-color-series-secondary: light-dark(var(--report-color-series-secondary-light), var(--report-color-series-secondary-dark));
+    --report-color-series-neutral: light-dark(var(--report-color-series-neutral-light), var(--report-color-series-neutral-dark));
+  }
+}
+body.report-page { background: var(--report-color-page-surface); color: var(--report-color-page-text); }
+.report-page .usa-card__container { background-color: var(--report-color-surface); border-color: var(--report-color-surface-border); color: var(--report-color-page-text); }
+.report-page .text-base-dark { color: var(--report-color-text-muted); }
+.report-page .text-primary { color: var(--report-color-text-accent); }
+.report-page .text-success-dark { color: var(--report-color-text-success); }
+.report-page .text-error-dark { color: var(--report-color-text-error); }
+.report-page .border-base-lighter { border-color: var(--report-color-surface-border); }
+.report-chart-panel { background: var(--report-color-surface); border: 1px solid var(--report-color-surface-border); border-radius: 4px; padding: 1.5rem 1.5rem 1rem; }
 .report-chart-wrap { overflow-x: auto; }
 /* aspect-ratio matches the svg's own width/height below width 480px, the
    svg's min-width keeps it 480 wide regardless of container, so the floor
    below keeps this box tall enough to match that too. */
 .report-chart { position: relative; aspect-ratio: 920 / 300; min-height: calc(480px * 300 / 920); }
 .report-chart svg { width: 100%; height: auto; display: block; min-width: 480px; }
-.report-axis-title { font-size: 12px; fill: #3d4551; font-weight: 600; }
-.report-axis .domain { stroke: #a9aeb1; }
-.report-axis .tick line { stroke: #a9aeb1; }
-.report-axis .tick text { font-size: 11px; fill: #565c65; }
+.report-axis-title { font-size: 12px; fill: var(--report-color-axis-title); font-weight: 600; }
+.report-axis .domain { stroke: var(--report-color-axis-line); }
+.report-axis .tick line { stroke: var(--report-color-axis-line); }
+.report-axis .tick text { font-size: 11px; fill: var(--report-color-axis-text); }
 .report-grid .domain { display: none; }
-.report-grid .tick line { stroke: #dfe1e2; stroke-width: 1; shape-rendering: crispEdges; }
+.report-grid .tick line { stroke: var(--report-color-grid-line); stroke-width: 1; shape-rendering: crispEdges; }
 .report-line { fill: none; stroke-width: 2px; }
-.report-marker { r: 4.5px; stroke: #fff; stroke-width: 2px; }
-.report-crosshair { stroke: #71767a; stroke-width: 1px; stroke-dasharray: 3 3; pointer-events: none; }
+.report-marker { r: 4.5px; stroke: var(--report-color-surface); stroke-width: 2px; }
+.report-crosshair { stroke: var(--report-color-crosshair); stroke-width: 1px; stroke-dasharray: 3 3; pointer-events: none; }
 .report-overlay { cursor: crosshair; }
-.report-annotation-line { stroke: #c05600; stroke-width: 1.5px; stroke-dasharray: 4 4; }
-.report-annotation-label { font-size: 10.5px; fill: #c05600; }
-.report-bar-label { font-size: 11px; fill: #1b1b1b; font-weight: 600; }
+.report-annotation-line { stroke: var(--report-color-annotation); stroke-width: 1.5px; stroke-dasharray: 4 4; }
+.report-annotation-label { font-size: 10.5px; fill: var(--report-color-annotation); }
+.report-bar-label { font-size: 11px; fill: var(--report-color-bar-label); font-weight: 600; }
 .report-bar.is-hovered { opacity: .85; }
-.report-tooltip { position: absolute; pointer-events: none; background: #1b1b1b; color: #fff; padding: .5rem .75rem; border-radius: 4px; font-size: .8rem; white-space: nowrap; z-index: 10; }
+.report-tooltip { position: absolute; pointer-events: none; background: var(--report-color-tooltip-surface); color: var(--report-color-tooltip-text); padding: .5rem .75rem; border-radius: 4px; font-size: .8rem; white-space: nowrap; z-index: 10; }
 .report-tooltip-title { font-weight: 700; margin-bottom: .25rem; }
 .report-tooltip-row { display: flex; align-items: center; gap: .4rem; }
 .report-tooltip-swatch { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 .report-tooltip-value { margin-left: auto; padding-left: .75rem; font-variant-numeric: tabular-nums; }
-.report-legend { display: flex; flex-wrap: wrap; gap: 1.5rem; margin-top: .75rem; padding-top: .75rem; border-top: 1px solid #dfe1e2; font-size: .93rem; }
+.report-legend { display: flex; flex-wrap: wrap; gap: 1.5rem; margin-top: .75rem; padding-top: .75rem; border-top: 1px solid var(--report-color-surface-border); font-size: .93rem; }
 .report-legend .report-swatch { display: inline-block; width: 14px; height: 3px; border-radius: 2px; margin-right: .4rem; vertical-align: middle; }
 .report-kpi-value { font-size: 2rem; font-weight: 700; font-variant-numeric: tabular-nums; margin: 0; }
 `
@@ -664,11 +803,11 @@ func renderHTML(gsa GSASummary, snapDate string, snapMeta SnapshotMeta, snapOK b
 		barValues[i] = yearlyShare[y]
 		switch {
 		case y == years[len(years)-1]:
-			barColors[i] = "#005ea2"
+			barColors[i] = "var(--report-color-series-primary)"
 		case y == years[len(years)-2]:
-			barColors[i] = "#c05600"
+			barColors[i] = "var(--report-color-series-secondary)"
 		default:
-			barColors[i] = "#a9aeb1"
+			barColors[i] = "var(--report-color-series-neutral)"
 		}
 	}
 
@@ -781,9 +920,9 @@ func renderHTML(gsa GSASummary, snapDate string, snapMeta SnapshotMeta, snapOK b
 		VersionMix: lineChart{
 			Dates: gsaDates,
 			Series: []chartSeries{
-				{"v3", "v3.x", "#005ea2", v3Vals},
-				{"v2", "v2.x", "#c05600", v2Vals},
-				{"v1", "v1.x", "#a9aeb1", v1Vals},
+				{"v3", "v3.x", "var(--report-color-series-primary)", v3Vals},
+				{"v2", "v2.x", "var(--report-color-series-secondary)", v2Vals},
+				{"v1", "v1.x", "var(--report-color-series-neutral)", v1Vals},
 			},
 			YLabel:    "Sites",
 			AriaLabel: "Line chart of USWDS v1, v2 and v3 site counts over time.",
@@ -798,15 +937,15 @@ func renderHTML(gsa GSASummary, snapDate string, snapMeta SnapshotMeta, snapOK b
 		},
 		OriginCount: lineChart{
 			Dates:     originDates,
-			Series:    []chartSeries{{"origins", "USWDS-detected origins", "#005ea2", originCounts}},
+			Series:    []chartSeries{{"origins", "USWDS-detected origins", "var(--report-color-series-primary)", originCounts}},
 			YLabel:    "USWDS-detected origins",
 			AriaLabel: "Line chart of raw USWDS origin counts climbing over time.",
 		},
 		CWV: cwvChart{
 			Dates: cwvDates,
 			Series: []chartSeries{
-				{"uswds", "USWDS sites", "#005ea2", cwvUswds},
-				{"all", "Web average", "#a9aeb1", cwvAll},
+				{"uswds", "USWDS sites", "var(--report-color-series-primary)", cwvUswds},
+				{"all", "Web average", "var(--report-color-series-neutral)", cwvAll},
 			},
 			YLabel:      "% of page loads, Good CWV",
 			YTickFormat: ".0f",
@@ -820,8 +959,8 @@ func renderHTML(gsa GSASummary, snapDate string, snapMeta SnapshotMeta, snapOK b
 		A11y: a11yChartData{
 			Dates: a11yDates,
 			Series: []chartSeries{
-				{"uswds", "USWDS sites", "#005ea2", a11yUswds},
-				{"all", "Web median", "#a9aeb1", a11yAll},
+				{"uswds", "USWDS sites", "var(--report-color-series-primary)", a11yUswds},
+				{"all", "Web median", "var(--report-color-series-neutral)", a11yAll},
 			},
 			YLabel:      "Median Lighthouse accessibility score",
 			YTickFormat: ".0f",
@@ -876,6 +1015,7 @@ func renderHTML(gsa GSASummary, snapDate string, snapMeta SnapshotMeta, snapOK b
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
   <title>USWDS Adoption Pulse</title>
   <link rel="stylesheet" href="assets/uswds/css/uswds.css">
   <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
@@ -905,7 +1045,7 @@ func renderHTML(gsa GSASummary, snapDate string, snapMeta SnapshotMeta, snapOK b
     })();
   </script>
 </head>
-<body>
+<body class="report-page">
 <div class="grid-container padding-y-4">
 <main>
 
@@ -956,17 +1096,17 @@ func renderHTML(gsa GSASummary, snapDate string, snapMeta SnapshotMeta, snapOK b
       <div id="chart-version-mix" class="report-chart"></div>
     </div>
     <div class="report-legend">
-      <span><span class="report-swatch" style="background:#005ea2"></span>v3.x <span class="text-base-dark">`)
+      <span><span class="report-swatch" style="background:var(--report-color-series-primary)"></span>v3.x <span class="text-base-dark">`)
 	b.WriteString(strconv.Itoa(gsa.V3First))
 	b.WriteString(` &rarr; `)
 	b.WriteString(strconv.Itoa(gsa.V3Last))
 	b.WriteString(`</span></span>
-      <span><span class="report-swatch" style="background:#c05600"></span>v2.x <span class="text-base-dark">`)
+      <span><span class="report-swatch" style="background:var(--report-color-series-secondary)"></span>v2.x <span class="text-base-dark">`)
 	b.WriteString(strconv.Itoa(gsa.V2First))
 	b.WriteString(` &rarr; `)
 	b.WriteString(strconv.Itoa(gsa.V2Last))
 	b.WriteString(`</span></span>
-      <span><span class="report-swatch" style="background:#a9aeb1"></span>v1.x <span class="text-base-dark">&rarr; `)
+      <span><span class="report-swatch" style="background:var(--report-color-series-neutral)"></span>v1.x <span class="text-base-dark">&rarr; `)
 	b.WriteString(strconv.Itoa(gsa.V1Last))
 	b.WriteString(`</span></span>
     </div>
@@ -1028,12 +1168,12 @@ func renderHTML(gsa GSASummary, snapDate string, snapMeta SnapshotMeta, snapOK b
       <div id="chart-cwv" class="report-chart"></div>
     </div>
     <div class="report-legend">
-      <span><span class="report-swatch" style="background:#005ea2"></span>USWDS sites <span class="text-base-dark">`)
+      <span><span class="report-swatch" style="background:var(--report-color-series-primary)"></span>USWDS sites <span class="text-base-dark">`)
 	b.WriteString(strconv.Itoa(cwvSeries[0].U))
 	b.WriteString(`% &rarr; `)
 	b.WriteString(strconv.Itoa(cwvSeries[len(cwvSeries)-1].U))
 	b.WriteString(`%</span></span>
-      <span><span class="report-swatch" style="background:#a9aeb1"></span>Web average <span class="text-base-dark">`)
+      <span><span class="report-swatch" style="background:var(--report-color-series-neutral)"></span>Web average <span class="text-base-dark">`)
 	b.WriteString(strconv.Itoa(cwvSeries[0].A))
 	b.WriteString(`% &rarr; `)
 	b.WriteString(strconv.Itoa(cwvSeries[len(cwvSeries)-1].A))
@@ -1067,12 +1207,12 @@ func renderHTML(gsa GSASummary, snapDate string, snapMeta SnapshotMeta, snapOK b
       <div id="chart-a11y" class="report-chart"></div>
     </div>
     <div class="report-legend">
-      <span><span class="report-swatch" style="background:#005ea2"></span>USWDS sites <span class="text-base-dark">`)
+      <span><span class="report-swatch" style="background:var(--report-color-series-primary)"></span>USWDS sites <span class="text-base-dark">`)
 	b.WriteString(strconv.Itoa(a11ySeries[0].U))
 	b.WriteString(` &rarr; `)
 	b.WriteString(strconv.Itoa(a11ySeries[len(a11ySeries)-1].U))
 	b.WriteString(`</span></span>
-      <span><span class="report-swatch" style="background:#a9aeb1"></span>Web median <span class="text-base-dark">`)
+      <span><span class="report-swatch" style="background:var(--report-color-series-neutral)"></span>Web median <span class="text-base-dark">`)
 	b.WriteString(strconv.Itoa(a11ySeries[0].A))
 	b.WriteString(` &rarr; `)
 	b.WriteString(strconv.Itoa(a11ySeries[len(a11ySeries)-1].A))

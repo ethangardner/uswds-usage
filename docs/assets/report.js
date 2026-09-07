@@ -118,13 +118,16 @@
     const line = d3.line().x((d, i) => x(dates[i])).y((d) => y(d));
 
     cfg.series.forEach((s) => {
-      g.append("path").datum(s.values).attr("class", "report-line").attr("fill", "none").attr("stroke", s.color).attr("d", line);
+      // .style() (not .attr()) for color so a CSS var() in s.color resolves
+      // through the cascade -- SVG presentation attributes don't substitute
+      // custom properties, but inline style properties do.
+      g.append("path").datum(s.values).attr("class", "report-line").style("fill", "none").style("stroke", s.color).attr("d", line);
       const lastIdx = s.values.length - 1;
       g.append("circle")
         .attr("class", "report-marker")
         .attr("cx", x(dates[lastIdx]))
         .attr("cy", y(s.values[lastIdx]))
-        .attr("fill", s.color);
+        .style("fill", s.color);
     });
 
     // Hover: a crosshair on the nearest date, one tooltip listing every series.
@@ -197,7 +200,7 @@
       .attr("y", (d) => y(d.value))
       .attr("height", (d) => INNER_H - y(d.value))
       .attr("rx", 2)
-      .attr("fill", (d) => d.color)
+      .style("fill", (d) => d.color)
       .on("mousemove", function (event, d) {
         setTooltipContent(tooltip, d.cat, [{ color: d.color, label: cfg.yLabel, value: fmtVal(d.value) }]);
         positionTooltip(tooltip, root, x(d.cat) + x.bandwidth() / 2 + MARGIN.left, y(d.value) + MARGIN.top);
